@@ -46,12 +46,16 @@
       <section id="startPanel" class="modal" role="dialog" aria-modal="true">
         <div class="modal-panel">
           <p class="eyebrow">PROLOGUE</p>
-          <h1>小 Saki 出击</h1>
+          <h1>Saki Takes Off</h1>
           <div class="dialogue-box">
-            <span class="speaker">小 Saki</span>
-            <p>小 Saki 要击败弹幕，收集金币升级，把恶意声音全部清掉。</p>
+            <span id="speakerName" class="speaker">Saki</span>
+            <p id="dialogueText">Hey... can you help me?</p>
           </div>
-          <button id="startBtn" class="primary-button" type="button">开始游戏</button>
+          <div id="dialogueChoices" class="choice-grid">
+            <button class="choice-button" type="button" data-choice="Yes">1. Yes</button>
+            <button class="choice-button" type="button" data-choice="Sure">2. Sure</button>
+          </div>
+          <button id="startBtn" class="primary-button hidden" type="button">Next</button>
         </div>
       </section>
 

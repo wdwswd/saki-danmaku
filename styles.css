@@ -253,6 +253,40 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+.choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.choice-grid.hidden,
+.primary-button.hidden {
+  display: none;
+}
+
+.choice-button {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 800;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.choice-button:hover,
+.choice-button:focus-visible {
+  border-color: rgba(255, 209, 102, 0.72);
+  background: rgba(255, 209, 102, 0.13);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .primary-button {
   width: 100%;
   min-height: 48px;

@@ -11,6 +11,9 @@ const xpFillEl = document.querySelector("#xpFill");
 const finalScoreEl = document.querySelector("#finalScore");
 const startPanel = document.querySelector("#startPanel");
 const endPanel = document.querySelector("#endPanel");
+const speakerNameEl = document.querySelector("#speakerName");
+const dialogueTextEl = document.querySelector("#dialogueText");
+const dialogueChoicesEl = document.querySelector("#dialogueChoices");
 const startBtn = document.querySelector("#startBtn");
 const retryBtn = document.querySelector("#retryBtn");
 const pauseBtn = document.querySelector("#pauseBtn");
@@ -33,8 +36,19 @@ const badTexts = [
   "拉踩",
 ];
 
+const introLines = [
+  { speaker: "Saki", text: "Hey... can you help me?", choices: ["Yes", "Sure"] },
+  { speaker: "Player", text: "Yes, Saki. Tell me what is happening." },
+  { speaker: "Saki", text: "A storm of hostile comments is flying across the screen." },
+  { speaker: "Player", text: "I will move you around and keep you safe." },
+  { speaker: "Saki", text: "Good. Shoot them down, collect coins, and level up." },
+  { speaker: "Saki", text: "If we reach 10,000 points, I will show you my victory pose." },
+];
+
 const state = {
   mode: "intro",
+  introIndex: 0,
+  introChoice: "",
   width: 0,
   height: 0,
   dpr: 1,
@@ -48,6 +62,8 @@ const state = {
   level: 1,
   levelGold: 0,
   levelPulse: 0,
+  tenKCheered: false,
+  cheerTimer: 0,
   spawnTimer: 0.5,
   fireTimer: 0,
   shake: 0,
@@ -195,6 +211,31 @@ function buildFallbackSprite() {
   return low;
 }
 
+function renderIntroDialogue() {
+  const line = introLines[state.introIndex] || introLines[introLines.length - 1];
+  speakerNameEl.textContent = line.speaker;
+  dialogueTextEl.textContent =
+    line.speaker === "Player" && state.introChoice
+      ? `${state.introChoice}, Saki. Tell me what is happening.`
+      : line.text;
+
+  dialogueChoicesEl.classList.toggle("hidden", !line.choices);
+  startBtn.classList.toggle("hidden", Boolean(line.choices));
+  startBtn.textContent = state.introIndex >= introLines.length - 1 ? "Start Game" : "Next";
+}
+
+function advanceIntro(choice = "") {
+  if (choice) state.introChoice = choice;
+
+  if (state.introIndex < introLines.length - 1) {
+    state.introIndex += 1;
+    renderIntroDialogue();
+    return;
+  }
+
+  resetGame();
+}
+
 function resetGame() {
   state.mode = "playing";
   state.elapsed = 0;
@@ -205,6 +246,8 @@ function resetGame() {
   state.level = 1;
   state.levelGold = 0;
   state.levelPulse = 0;
+  state.tenKCheered = false;
+  state.cheerTimer = 0;
   state.spawnTimer = 0.35;
   state.fireTimer = 0.08;
   state.shake = 0;
@@ -372,7 +415,17 @@ function addGoldReward(enemy) {
   }
 
   spawnCoinText(enemy.x, enemy.y, reward);
+  checkScoreMilestones();
   updateHud();
+}
+
+function checkScoreMilestones() {
+  if (!state.tenKCheered && state.score >= 10000) {
+    state.tenKCheered = true;
+    state.cheerTimer = 5.2;
+    state.shake = Math.max(state.shake, 9);
+    spawnBurst(state.player.x, state.player.y - 38, "#ffd166", 36);
+  }
 }
 
 function spawnBurst(x, y, color, amount = 12) {
@@ -444,6 +497,7 @@ function updateWorld(dt) {
   state.spawnTimer -= dt;
   state.shake = Math.max(0, state.shake - dt * 42);
   state.levelPulse = Math.max(0, state.levelPulse - dt);
+  state.cheerTimer = Math.max(0, state.cheerTimer - dt);
 
   updatePlayer(dt);
   fireBullet(false);
@@ -666,6 +720,107 @@ function drawLevelUp() {
   ctx.restore();
 }
 
+function drawSpeechBubble(x, y, text) {
+  const width = 360;
+  const height = 88;
+  const left = clamp(x, 24, state.width - width - 24);
+  const top = clamp(y, playTop() + 10, state.height - height - 28);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(248, 241, 255, 0.94)";
+  ctx.strokeStyle = "#ffd166";
+  ctx.lineWidth = 3;
+  roundRect(ctx, left, top, width, height, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#151218";
+  ctx.beginPath();
+  ctx.moveTo(left + 44, top + height - 1);
+  ctx.lineTo(left + 72, top + height + 24);
+  ctx.lineTo(left + 92, top + height - 1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#4b378f";
+  ctx.font = "900 15px Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText("Saki", left + 18, top + 14);
+
+  ctx.fillStyle = "#151218";
+  ctx.font = "800 20px Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.fillText(text, left + 18, top + 42);
+  ctx.restore();
+}
+
+function drawThumbsUp(x, y, scale) {
+  const unit = 6 * scale;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = "#fff4ee";
+  ctx.strokeStyle = "#151218";
+  ctx.lineWidth = Math.max(2, 2 * scale);
+
+  const blocks = [
+    [0, 2, 4, 5],
+    [4, 1, 3, 6],
+    [7, 0, 2, 4],
+    [9, 1, 2, 3],
+    [9, 4, 2, 3],
+    [8, 7, 2, 3],
+  ];
+
+  for (const [bx, by, bw, bh] of blocks) {
+    ctx.fillRect(bx * unit, by * unit, bw * unit, bh * unit);
+    ctx.strokeRect(bx * unit, by * unit, bw * unit, bh * unit);
+  }
+
+  ctx.fillStyle = "#a58cff";
+  ctx.fillRect(-1 * unit, 6 * unit, 4 * unit, 4 * unit);
+  ctx.strokeRect(-1 * unit, 6 * unit, 4 * unit, 4 * unit);
+  ctx.restore();
+}
+
+function drawTenKCheer() {
+  if (state.cheerTimer <= 0 || state.mode !== "playing") return;
+
+  const progress = 1 - state.cheerTimer / 5.2;
+  const alpha = state.cheerTimer < 0.7 ? state.cheerTimer / 0.7 : 1;
+  const sprite = state.sprite || buildFallbackSprite();
+  const baseScale = clamp(state.width / 720, 2.1, 3.1);
+  const pulse = 1 + Math.sin(state.time * 10) * 0.04;
+  const width = sprite.width * baseScale * pulse;
+  const height = sprite.height * baseScale * pulse;
+  const x = state.width * 0.5 - 90;
+  const y = state.height * 0.52 + Math.sin(state.time * 7) * 5;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(18, 16, 20, 0.36)";
+  ctx.fillRect(0, 0, state.width, state.height);
+
+  drawSpeechBubble(state.width * 0.5 - 18, state.height * 0.22, "10,000! Nice shot!");
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.shadowColor = "rgba(255, 209, 102, 0.72)";
+  ctx.shadowBlur = 28;
+  ctx.drawImage(sprite, x - width * 0.5, y - height * 0.62, width, height);
+  ctx.shadowBlur = 0;
+
+  const thumbWave = Math.sin(progress * Math.PI * 8) * 5;
+  drawThumbsUp(x + width * 0.24, y - height * 0.42 + thumbWave, baseScale * 0.48);
+
+  ctx.fillStyle = "#ffd166";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "900 38px Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.fillText("10000 POINTS", state.width * 0.5, y + height * 0.44);
+  ctx.restore();
+  ctx.imageSmoothingEnabled = true;
+}
+
 function drawPaused() {
   if (state.mode !== "paused") return;
   ctx.save();
@@ -698,6 +853,7 @@ function draw() {
   if (state.mode !== "intro") drawPlayer();
   drawIntroPreview();
   drawLevelUp();
+  drawTenKCheer();
   ctx.restore();
   drawPaused();
 }
@@ -748,7 +904,8 @@ window.addEventListener("keydown", (event) => {
   if (["arrowleft", "arrowright", "arrowup", "arrowdown", " ", "w", "a", "s", "d"].includes(key)) {
     event.preventDefault();
   }
-  if (key === "enter" && state.mode !== "playing") resetGame();
+  if (key === "enter" && state.mode === "intro") advanceIntro();
+  if (key === "enter" && state.mode === "over") resetGame();
   if (key === "p" || key === "escape") togglePause();
   if (key === " ") fireBullet(true);
   state.keys.add(key);
@@ -780,7 +937,12 @@ canvas.addEventListener("pointercancel", () => {
   state.pointer.active = false;
 });
 
-startBtn.addEventListener("click", resetGame);
+dialogueChoicesEl.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-choice]");
+  if (!button) return;
+  advanceIntro(button.dataset.choice);
+});
+startBtn.addEventListener("click", () => advanceIntro());
 retryBtn.addEventListener("click", resetGame);
 pauseBtn.addEventListener("click", togglePause);
 
@@ -794,5 +956,6 @@ asset.addEventListener("error", () => {
 
 resize();
 state.sprite = buildFallbackSprite();
+renderIntroDialogue();
 state.lastFrame = performance.now();
 requestAnimationFrame(frame);
