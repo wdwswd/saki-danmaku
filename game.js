@@ -749,9 +749,9 @@ function drawPlayer() {
 }
 
 function drawPixelGun(playerWidth, playerHeight, scale, firing) {
-  const unit = Math.max(3, 3.4 * scale);
-  const gunX = playerWidth * 0.15;
-  const gunY = -playerHeight * 0.24;
+  const unit = Math.max(2.4, 2.05 * scale);
+  const gunX = playerWidth * 0.18;
+  const gunY = -playerHeight * 0.22;
 
   ctx.save();
   ctx.translate(gunX, gunY);
@@ -759,30 +759,30 @@ function drawPixelGun(playerWidth, playerHeight, scale, firing) {
   ctx.strokeStyle = "#151218";
   ctx.lineWidth = Math.max(2, unit * 0.45);
 
-  ctx.fillRect(-4 * unit, 0, 5 * unit, 3 * unit);
-  ctx.strokeRect(-4 * unit, 0, 5 * unit, 3 * unit);
+  ctx.fillRect(-3 * unit, 0, 4 * unit, 2.5 * unit);
+  ctx.strokeRect(-3 * unit, 0, 4 * unit, 2.5 * unit);
 
   ctx.fillStyle = "#fff4ee";
-  ctx.fillRect(-unit, -unit, 4 * unit, 4 * unit);
-  ctx.strokeRect(-unit, -unit, 4 * unit, 4 * unit);
+  ctx.fillRect(-0.5 * unit, -0.5 * unit, 3 * unit, 3 * unit);
+  ctx.strokeRect(-0.5 * unit, -0.5 * unit, 3 * unit, 3 * unit);
 
   ctx.fillStyle = "#2a2730";
-  ctx.fillRect(2 * unit, -1.5 * unit, 12 * unit, 3 * unit);
-  ctx.strokeRect(2 * unit, -1.5 * unit, 12 * unit, 3 * unit);
+  ctx.fillRect(2 * unit, -1 * unit, 8 * unit, 2.2 * unit);
+  ctx.strokeRect(2 * unit, -1 * unit, 8 * unit, 2.2 * unit);
   ctx.fillStyle = "#5a5664";
-  ctx.fillRect(5 * unit, -3 * unit, 5 * unit, 2 * unit);
-  ctx.strokeRect(5 * unit, -3 * unit, 5 * unit, 2 * unit);
+  ctx.fillRect(4 * unit, -2.4 * unit, 3.6 * unit, 1.4 * unit);
+  ctx.strokeRect(4 * unit, -2.4 * unit, 3.6 * unit, 1.4 * unit);
   ctx.fillStyle = "#151218";
-  ctx.fillRect(7 * unit, 1.5 * unit, 3 * unit, 5 * unit);
-  ctx.strokeRect(7 * unit, 1.5 * unit, 3 * unit, 5 * unit);
+  ctx.fillRect(5.2 * unit, 1.2 * unit, 2.2 * unit, 3.7 * unit);
+  ctx.strokeRect(5.2 * unit, 1.2 * unit, 2.2 * unit, 3.7 * unit);
   ctx.fillStyle = "#5df0c4";
-  ctx.fillRect(12 * unit, -0.5 * unit, 2 * unit, unit);
+  ctx.fillRect(8.6 * unit, -0.2 * unit, 1.4 * unit, 0.7 * unit);
 
   if (firing) {
     ctx.fillStyle = "#ffd166";
-    ctx.fillRect(15 * unit, -2 * unit, 5 * unit, 4 * unit);
+    ctx.fillRect(11 * unit, -1.5 * unit, 3.5 * unit, 3 * unit);
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(17 * unit, -unit, 2 * unit, 2 * unit);
+    ctx.fillRect(12.2 * unit, -0.5 * unit, 1.3 * unit, 1.3 * unit);
   }
 
   ctx.restore();
