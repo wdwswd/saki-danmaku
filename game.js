@@ -97,6 +97,13 @@ const state = {
 const random = (min, max) => min + Math.random() * (max - min);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const nextLevelCost = (level) => 24 + level * 12;
+const bulletPalettes = [
+  { core: "#5df0c4", glow: "rgba(93, 240, 196, 0.8)", trail: "rgba(93, 240, 196, 0.24)" },
+  { core: "#ffd166", glow: "rgba(255, 209, 102, 0.86)", trail: "rgba(255, 209, 102, 0.28)" },
+  { core: "#c9f8ff", glow: "rgba(107, 211, 255, 0.9)", trail: "rgba(107, 211, 255, 0.3)" },
+  { core: "#ff63a8", glow: "rgba(255, 99, 168, 0.9)", trail: "rgba(255, 99, 168, 0.3)" },
+  { core: "#ffffff", glow: "rgba(255, 255, 255, 0.95)", trail: "rgba(180, 140, 255, 0.36)" },
+];
 const dist2 = (ax, ay, bx, by) => {
   const dx = ax - bx;
   const dy = ay - by;
@@ -345,6 +352,14 @@ function spriteScale() {
   return clamp(state.width / 430, 1.75, 2.45);
 }
 
+function scoreTier() {
+  return Math.min(bulletPalettes.length - 1, Math.floor(state.score / 5000));
+}
+
+function hardModeLevel() {
+  return Math.max(0, Math.floor((state.score - 12500) / 2500) + 1);
+}
+
 function playTop() {
   return state.width <= 560 ? 172 : 112;
 }
@@ -394,19 +409,31 @@ function fireBullet(force = false) {
   if (state.mode !== "playing") return;
   if (!force && state.fireTimer > 0) return;
 
-  const tier = Math.min(2, Math.floor((state.level - 1) / 2));
-  const spread = tier === 0 ? [0] : tier === 1 ? [-0.055, 0.055] : [-0.08, 0, 0.08];
-  const fireDelay = Math.max(0.09, 0.16 - (state.level - 1) * 0.008);
+  const tier = scoreTier();
+  const levelSpread = Math.min(2, Math.floor((state.level - 1) / 2));
+  const spread =
+    Math.max(tier, levelSpread) === 0
+      ? [0]
+      : Math.max(tier, levelSpread) === 1
+        ? [-0.055, 0.055]
+        : tier >= 3
+          ? [-0.12, -0.045, 0.045, 0.12]
+          : [-0.08, 0, 0.08];
+  const palette = bulletPalettes[tier];
+  const fireDelay = Math.max(0.075, 0.16 - (state.level - 1) * 0.008 - tier * 0.008);
 
   for (const offset of spread) {
     state.bullets.push({
       x: state.player.x + 32,
       y: state.player.y - 8,
-      vx: 650,
-      vy: offset * 650,
-      radius: 5,
-      life: 1.2,
-      color: tier === 0 ? "#5df0c4" : tier === 1 ? "#ffd166" : "#c9f8ff",
+      vx: 650 + tier * 35,
+      vy: offset * (650 + tier * 35),
+      radius: 5 + tier * 0.7,
+      life: 1.2 + tier * 0.05,
+      color: palette.core,
+      glow: palette.glow,
+      trail: palette.trail,
+      tier,
     });
   }
 
@@ -417,7 +444,9 @@ function fireBullet(force = false) {
 function spawnEnemy() {
   const text = badTexts[Math.floor(Math.random() * badTexts.length)];
   const textUnits = Array.from(text).length;
-  const hp = clamp(1 + Math.floor(random(0, 1.45 + state.elapsed / 34 + state.level / 16)), 1, 5);
+  const hard = hardModeLevel();
+  const hpMax = hard > 0 ? Math.min(8, 5 + Math.floor(hard / 2)) : 5;
+  const hp = clamp(1 + Math.floor(random(0, 1.45 + state.elapsed / 34 + state.level / 16 + hard * 0.35)), 1, hpMax);
   const width = Math.max(78, 34 + textUnits * 19 + hp * 10);
   const height = 30 + hp * 2;
   const palette = [
@@ -435,16 +464,16 @@ function spawnEnemy() {
     height,
     hp,
     maxHp: hp,
-    speed: random(82, 150) + Math.min(95, state.elapsed * 1.35),
-    wobble: random(0.7, 1.8),
+    speed: random(82, 150) + Math.min(95, state.elapsed * 1.35) + hard * 22,
+    wobble: random(0.7, 1.8 + hard * 0.12),
     phase: random(0, Math.PI * 2),
     text,
     color: palette[0],
     fill: palette[1],
   });
 
-  const next = 1.02 - Math.min(0.58, state.elapsed / 80) + random(-0.18, 0.2);
-  state.spawnTimer = Math.max(0.28, next);
+  const next = 1.02 - Math.min(0.58, state.elapsed / 80) - hard * 0.075 + random(-0.18, 0.2);
+  state.spawnTimer = Math.max(hard > 0 ? 0.16 : 0.28, next);
 }
 
 function addGoldReward(enemy) {
@@ -551,8 +580,10 @@ function updateWorld(dt) {
   fireBullet(false);
 
   if (state.spawnTimer <= 0) {
+    const hard = hardModeLevel();
     spawnEnemy();
     if (state.elapsed > 45 && Math.random() > 0.72) spawnEnemy();
+    if (hard > 0 && Math.random() < Math.min(0.18 + hard * 0.06, 0.48)) spawnEnemy();
   }
 
   for (const bullet of state.bullets) {
@@ -686,11 +717,23 @@ function drawBullets() {
   for (const bullet of state.bullets) {
     ctx.save();
     ctx.translate(bullet.x, bullet.y);
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = bullet.trail || "rgba(93, 240, 196, 0.24)";
+    ctx.fillRect(-20 - bullet.tier * 4, -2, 18 + bullet.tier * 3, 4);
+    if (bullet.tier >= 2) {
+      ctx.fillRect(-12, -8, 10 + bullet.tier * 2, 3);
+      ctx.fillRect(-12, 5, 10 + bullet.tier * 2, 3);
+    }
+    ctx.globalAlpha = 1;
     ctx.fillStyle = bullet.color;
-    ctx.shadowColor = bullet.color;
-    ctx.shadowBlur = 16;
-    ctx.fillRect(-5, -3, 13, 6);
-    ctx.fillRect(2, -6, 4, 12);
+    ctx.shadowColor = bullet.glow || bullet.color;
+    ctx.shadowBlur = 14 + bullet.tier * 5;
+    ctx.fillRect(-5, -3 - bullet.tier * 0.5, 13 + bullet.tier * 3, 6 + bullet.tier);
+    ctx.fillRect(2, -6 - bullet.tier, 4 + bullet.tier, 12 + bullet.tier * 2);
+    if (bullet.tier >= 3) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(3, -2, 9, 4);
+    }
     ctx.restore();
   }
 }
