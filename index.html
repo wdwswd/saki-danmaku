@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>弹幕净化战</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <canvas id="game" aria-label="弹幕净化战游戏画面"></canvas>
+
+      <header class="hud" aria-live="polite">
+        <div class="meter">
+          <span class="label">分数</span>
+          <strong id="score">0</strong>
+        </div>
+        <div class="meter">
+          <span class="label">护盾</span>
+          <strong id="shield">5</strong>
+        </div>
+        <div class="meter">
+          <span class="label">连击</span>
+          <strong id="combo">0</strong>
+        </div>
+        <div class="meter">
+          <span class="label">金币</span>
+          <strong id="gold">0</strong>
+        </div>
+        <div class="meter">
+          <span class="label">等级</span>
+          <strong id="level">1</strong>
+        </div>
+        <button id="pauseBtn" class="icon-button" type="button" aria-label="暂停或继续">Ⅱ</button>
+        <div class="xp-panel" aria-label="金币经验条">
+          <div class="xp-header">
+            <span>金币经验</span>
+            <strong id="xpText">0 / 36</strong>
+          </div>
+          <div class="xp-track">
+            <div id="xpFill" class="xp-fill"></div>
+          </div>
+        </div>
+      </header>
+
+      <section id="startPanel" class="modal" role="dialog" aria-modal="true">
+        <div class="modal-panel">
+          <p class="eyebrow">PROLOGUE</p>
+          <h1>小 Saki 出击</h1>
+          <div class="dialogue-box">
+            <span class="speaker">小 Saki</span>
+            <p>小 Saki 要击败弹幕，收集金币升级，把恶意声音全部清掉。</p>
+          </div>
+          <button id="startBtn" class="primary-button" type="button">开始游戏</button>
+        </div>
+      </section>
+
+      <section id="endPanel" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-panel">
+          <p class="eyebrow">CLEAR REPORT</p>
+          <h2>护盾耗尽</h2>
+          <p class="lede">本轮分数 <strong id="finalScore">0</strong></p>
+          <button id="retryBtn" class="primary-button" type="button">再来一局</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="game.js" defer></script>
+  </body>
+</html>
