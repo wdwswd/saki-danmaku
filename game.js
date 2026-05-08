@@ -368,7 +368,7 @@ function scoreTier() {
 }
 
 function hardModeLevel() {
-  return Math.max(0, Math.floor((state.score - 12500) / 2500) + 1);
+  return Math.max(0, Math.floor((state.score - 12500) / 4000) + 1);
 }
 
 function playTop() {
@@ -456,8 +456,8 @@ function spawnEnemy() {
   const text = badTexts[Math.floor(Math.random() * badTexts.length)];
   const textUnits = Array.from(text).length;
   const hard = hardModeLevel();
-  const hpMax = hard > 0 ? Math.min(8, 5 + Math.floor(hard / 2)) : 5;
-  const hp = clamp(1 + Math.floor(random(0, 1.45 + state.elapsed / 34 + state.level / 16 + hard * 0.35)), 1, hpMax);
+  const hpMax = hard > 0 ? Math.min(6, 4 + Math.floor(hard / 3)) : 4;
+  const hp = clamp(1 + Math.floor(random(0, 1.1 + state.elapsed / 48 + state.level / 22 + hard * 0.16)), 1, hpMax);
   const width = Math.max(78, 34 + textUnits * 19 + hp * 10);
   const height = 30 + hp * 2;
   const palette = [
@@ -475,16 +475,16 @@ function spawnEnemy() {
     height,
     hp,
     maxHp: hp,
-    speed: random(82, 150) + Math.min(95, state.elapsed * 1.35) + hard * 22,
-    wobble: random(0.7, 1.8 + hard * 0.12),
+    speed: random(72, 128) + Math.min(72, state.elapsed * 0.9) + hard * 12,
+    wobble: random(0.55, 1.45 + hard * 0.08),
     phase: random(0, Math.PI * 2),
     text,
     color: palette[0],
     fill: palette[1],
   });
 
-  const next = 1.02 - Math.min(0.58, state.elapsed / 80) - hard * 0.075 + random(-0.18, 0.2);
-  state.spawnTimer = Math.max(hard > 0 ? 0.16 : 0.28, next);
+  const next = 1.22 - Math.min(0.42, state.elapsed / 110) - hard * 0.04 + random(-0.12, 0.22);
+  state.spawnTimer = Math.max(hard > 0 ? 0.32 : 0.48, next);
 }
 
 function addGoldReward(enemy) {
@@ -510,7 +510,7 @@ function addGoldReward(enemy) {
 function checkScoreMilestones() {
   if (!state.tenKCheered && state.score >= 10000) {
     state.tenKCheered = true;
-    state.cheerTimer = 5.2;
+    state.cheerTimer = 9.2;
     state.shake = Math.max(state.shake, 9);
     spawnBurst(state.player.x, state.player.y - 38, "#ffd166", 36);
   }
@@ -593,8 +593,8 @@ function updateWorld(dt) {
   if (state.spawnTimer <= 0) {
     const hard = hardModeLevel();
     spawnEnemy();
-    if (state.elapsed > 45 && Math.random() > 0.72) spawnEnemy();
-    if (hard > 0 && Math.random() < Math.min(0.18 + hard * 0.06, 0.48)) spawnEnemy();
+    if (state.elapsed > 60 && Math.random() > 0.82) spawnEnemy();
+    if (hard > 0 && Math.random() < Math.min(0.08 + hard * 0.035, 0.28)) spawnEnemy();
   }
 
   for (const bullet of state.bullets) {
@@ -858,20 +858,22 @@ function drawSpeechBubble(x, y, text) {
 }
 
 function drawThumbsUp(x, y, scale) {
-  const unit = 6 * scale;
+  const unit = 7 * scale;
   ctx.save();
   ctx.translate(x, y);
   ctx.fillStyle = "#fff4ee";
   ctx.strokeStyle = "#151218";
-  ctx.lineWidth = Math.max(2, 2 * scale);
+  ctx.lineWidth = Math.max(3, 2.4 * scale);
 
   const blocks = [
-    [0, 2, 4, 5],
-    [4, 1, 3, 6],
-    [7, 0, 2, 4],
-    [9, 1, 2, 3],
-    [9, 4, 2, 3],
-    [8, 7, 2, 3],
+    [0, 4, 5, 5],
+    [5, 3, 4, 6],
+    [8, 1, 3, 4],
+    [10, 0, 2, 3],
+    [10, 4, 5, 2],
+    [10, 6, 5, 2],
+    [9, 8, 5, 2],
+    [8, 10, 5, 2],
   ];
 
   for (const [bx, by, bw, bh] of blocks) {
@@ -880,30 +882,35 @@ function drawThumbsUp(x, y, scale) {
   }
 
   ctx.fillStyle = "#a58cff";
-  ctx.fillRect(-1 * unit, 6 * unit, 4 * unit, 4 * unit);
-  ctx.strokeRect(-1 * unit, 6 * unit, 4 * unit, 4 * unit);
+  ctx.fillRect(-2 * unit, 7 * unit, 5 * unit, 5 * unit);
+  ctx.strokeRect(-2 * unit, 7 * unit, 5 * unit, 5 * unit);
+  ctx.fillStyle = "#ffd166";
+  ctx.fillRect(11 * unit, -1 * unit, unit, unit);
+  ctx.fillRect(13 * unit, -2 * unit, unit, unit);
+  ctx.fillRect(15 * unit, 0, unit, unit);
   ctx.restore();
 }
 
 function drawTenKCheer() {
   if (state.cheerTimer <= 0 || state.mode !== "playing") return;
 
-  const progress = 1 - state.cheerTimer / 5.2;
-  const alpha = state.cheerTimer < 0.7 ? state.cheerTimer / 0.7 : 1;
+  const duration = 9.2;
+  const progress = 1 - state.cheerTimer / duration;
+  const alpha = state.cheerTimer < 1 ? state.cheerTimer : Math.min(1, progress / 0.12);
   const sprite = state.sprite || buildFallbackSprite();
-  const baseScale = clamp(state.width / 720, 2.1, 3.1);
-  const pulse = 1 + Math.sin(state.time * 10) * 0.04;
+  const baseScale = clamp(state.width / 720, 2.35, 3.35);
+  const pulse = 1 + Math.sin(state.time * 6) * 0.025;
   const width = sprite.width * baseScale * pulse;
   const height = sprite.height * baseScale * pulse;
-  const x = state.width * 0.5 - 90;
-  const y = state.height * 0.52 + Math.sin(state.time * 7) * 5;
+  const x = state.width * 0.5 - 138;
+  const y = state.height * 0.54 + Math.sin(state.time * 5) * 4;
 
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "rgba(18, 16, 20, 0.36)";
+  ctx.fillStyle = "rgba(18, 16, 20, 0.52)";
   ctx.fillRect(0, 0, state.width, state.height);
 
-  drawSpeechBubble(state.width * 0.5 - 18, state.height * 0.22, "10,000! Nice shot!");
+  drawSpeechBubble(state.width * 0.5 - 52, state.height * 0.18, "10,000! THUMBS UP!");
 
   ctx.imageSmoothingEnabled = false;
   ctx.shadowColor = "rgba(255, 209, 102, 0.72)";
@@ -911,13 +918,14 @@ function drawTenKCheer() {
   ctx.drawImage(sprite, x - width * 0.5, y - height * 0.62, width, height);
   ctx.shadowBlur = 0;
 
-  const thumbWave = Math.sin(progress * Math.PI * 8) * 5;
-  drawThumbsUp(x + width * 0.24, y - height * 0.42 + thumbWave, baseScale * 0.48);
+  const raise = progress < 0.28 ? 90 * (1 - progress / 0.28) : 0;
+  const thumbWave = progress > 0.28 ? Math.sin(progress * Math.PI * 7) * 4 : 0;
+  drawThumbsUp(x + width * 0.28, y - height * 0.56 + raise + thumbWave, baseScale * 0.72);
 
   ctx.fillStyle = "#ffd166";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "900 38px Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.font = "900 44px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
   ctx.fillText("10000 POINTS", state.width * 0.5, y + height * 0.44);
   ctx.restore();
   ctx.imageSmoothingEnabled = true;
