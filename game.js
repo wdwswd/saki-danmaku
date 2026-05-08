@@ -743,8 +743,49 @@ function drawPlayer() {
   ctx.globalAlpha = player.invuln > 0 && Math.floor(state.time * 18) % 2 === 0 ? 0.68 : 1;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(sprite, -width * 0.5, -height * 0.62, width, height);
+  drawPixelGun(width, height, scale, player.muzzle > 0);
   ctx.restore();
   ctx.imageSmoothingEnabled = true;
+}
+
+function drawPixelGun(playerWidth, playerHeight, scale, firing) {
+  const unit = Math.max(3, 3.4 * scale);
+  const gunX = playerWidth * 0.15;
+  const gunY = -playerHeight * 0.24;
+
+  ctx.save();
+  ctx.translate(gunX, gunY);
+  ctx.fillStyle = "#a58cff";
+  ctx.strokeStyle = "#151218";
+  ctx.lineWidth = Math.max(2, unit * 0.45);
+
+  ctx.fillRect(-4 * unit, 0, 5 * unit, 3 * unit);
+  ctx.strokeRect(-4 * unit, 0, 5 * unit, 3 * unit);
+
+  ctx.fillStyle = "#fff4ee";
+  ctx.fillRect(-unit, -unit, 4 * unit, 4 * unit);
+  ctx.strokeRect(-unit, -unit, 4 * unit, 4 * unit);
+
+  ctx.fillStyle = "#2a2730";
+  ctx.fillRect(2 * unit, -1.5 * unit, 12 * unit, 3 * unit);
+  ctx.strokeRect(2 * unit, -1.5 * unit, 12 * unit, 3 * unit);
+  ctx.fillStyle = "#5a5664";
+  ctx.fillRect(5 * unit, -3 * unit, 5 * unit, 2 * unit);
+  ctx.strokeRect(5 * unit, -3 * unit, 5 * unit, 2 * unit);
+  ctx.fillStyle = "#151218";
+  ctx.fillRect(7 * unit, 1.5 * unit, 3 * unit, 5 * unit);
+  ctx.strokeRect(7 * unit, 1.5 * unit, 3 * unit, 5 * unit);
+  ctx.fillStyle = "#5df0c4";
+  ctx.fillRect(12 * unit, -0.5 * unit, 2 * unit, unit);
+
+  if (firing) {
+    ctx.fillStyle = "#ffd166";
+    ctx.fillRect(15 * unit, -2 * unit, 5 * unit, 4 * unit);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(17 * unit, -unit, 2 * unit, 2 * unit);
+  }
+
+  ctx.restore();
 }
 
 function drawBullets() {
@@ -881,36 +922,68 @@ function drawSpeechBubble(x, y, text) {
 }
 
 function drawThumbsUp(x, y, scale) {
-  const unit = 7 * scale;
+  const unit = 5.4 * scale;
+  const edge = Math.max(2, unit * 0.18);
+  const map = [
+    "......SSS......",
+    ".....SSSS......",
+    ".....SSSS......",
+    "....SSSS.......",
+    "....SSS........",
+    "...SSSS........",
+    "...SSSSPPPP....",
+    "...SSSPFFFFF...",
+    "..SSSPFFFFFF...",
+    ".CCCCPFFFFFF...",
+    ".CCCCPFFFFF....",
+    ".CCCCPFFFFFF...",
+    ".CCCCPFFFFF....",
+    ".CCCCPPPPPP....",
+    ".CCCCPPPPP.....",
+    ".CCCC..........",
+  ];
+  const colors = {
+    S: "#f4d2bf",
+    P: "#f4d2bf",
+    F: "#f4d2bf",
+    C: "#a58cff",
+  };
+
   ctx.save();
   ctx.translate(x, y);
-  ctx.fillStyle = "#fff4ee";
-  ctx.strokeStyle = "#151218";
-  ctx.lineWidth = Math.max(3, 2.4 * scale);
 
-  const blocks = [
-    [0, 4, 5, 5],
-    [5, 3, 4, 6],
-    [8, 1, 3, 4],
-    [10, 0, 2, 3],
-    [10, 4, 5, 2],
-    [10, 6, 5, 2],
-    [9, 8, 5, 2],
-    [8, 10, 5, 2],
-  ];
-
-  for (const [bx, by, bw, bh] of blocks) {
-    ctx.fillRect(bx * unit, by * unit, bw * unit, bh * unit);
-    ctx.strokeRect(bx * unit, by * unit, bw * unit, bh * unit);
+  for (let row = 0; row < map.length; row += 1) {
+    for (let col = 0; col < map[row].length; col += 1) {
+      const cell = map[row][col];
+      if (cell === ".") continue;
+      ctx.fillStyle = colors[cell];
+      ctx.fillRect(col * unit, row * unit, unit, unit);
+    }
   }
 
-  ctx.fillStyle = "#a58cff";
-  ctx.fillRect(-2 * unit, 7 * unit, 5 * unit, 5 * unit);
-  ctx.strokeRect(-2 * unit, 7 * unit, 5 * unit, 5 * unit);
+  ctx.fillStyle = "#151218";
+  for (let row = 0; row < map.length; row += 1) {
+    for (let col = 0; col < map[row].length; col += 1) {
+      if (map[row][col] === ".") continue;
+      const px = col * unit;
+      const py = row * unit;
+      if (!map[row - 1] || map[row - 1][col] === ".") ctx.fillRect(px, py, unit, edge);
+      if (!map[row + 1] || map[row + 1][col] === ".") ctx.fillRect(px, py + unit - edge, unit, edge);
+      if (map[row][col - 1] === "." || col === 0) ctx.fillRect(px, py, edge, unit);
+      if (map[row][col + 1] === "." || col === map[row].length - 1) {
+        ctx.fillRect(px + unit - edge, py, edge, unit);
+      }
+    }
+  }
+
+  ctx.fillStyle = "#fff4ee";
+  ctx.fillRect(6 * unit, 2 * unit, unit, unit);
+  ctx.fillRect(11 * unit, 8 * unit, unit, edge * 1.4);
+  ctx.fillRect(11 * unit, 10 * unit, unit, edge * 1.4);
   ctx.fillStyle = "#ffd166";
-  ctx.fillRect(11 * unit, -1 * unit, unit, unit);
-  ctx.fillRect(13 * unit, -2 * unit, unit, unit);
-  ctx.fillRect(15 * unit, 0, unit, unit);
+  ctx.fillRect(13.5 * unit, 1 * unit, unit, unit);
+  ctx.fillRect(14.7 * unit, 2.5 * unit, unit, unit);
+  ctx.fillRect(13.8 * unit, 4.2 * unit, unit, unit);
   ctx.restore();
 }
 
@@ -943,7 +1016,7 @@ function drawTenKCheer() {
 
   const raise = progress < 0.28 ? 90 * (1 - progress / 0.28) : 0;
   const thumbWave = progress > 0.28 ? Math.sin(progress * Math.PI * 7) * 4 : 0;
-  drawThumbsUp(x + width * 0.28, y - height * 0.56 + raise + thumbWave, baseScale * 0.72);
+  drawThumbsUp(x + width * 0.2, y - height * 0.72 + raise + thumbWave, baseScale * 0.78);
 
   ctx.fillStyle = "#ffd166";
   ctx.textAlign = "center";
