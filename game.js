@@ -17,9 +17,15 @@ const dialogueChoicesEl = document.querySelector("#dialogueChoices");
 const startBtn = document.querySelector("#startBtn");
 const retryBtn = document.querySelector("#retryBtn");
 const pauseBtn = document.querySelector("#pauseBtn");
+const musicBtn = document.querySelector("#musicBtn");
 
 const asset = new Image();
 asset.src = "assets/character-source.png";
+
+const musicTracks = ["assets/music/skybit-dogfight.mp3", "assets/music/skybit-dogfight-alt.mp3"];
+const bgMusic = new Audio();
+bgMusic.preload = "auto";
+bgMusic.volume = 0.36;
 
 const badTexts = [
   "恶意弹幕",
@@ -64,6 +70,9 @@ const state = {
   levelPulse: 0,
   tenKCheered: false,
   cheerTimer: 0,
+  musicEnabled: true,
+  musicStarted: false,
+  musicIndex: 0,
   spawnTimer: 0.5,
   fireTimer: 0,
   shake: 0,
@@ -236,6 +245,41 @@ function advanceIntro(choice = "") {
   resetGame();
 }
 
+function playMusicTrack() {
+  if (!state.musicEnabled) return;
+  bgMusic.src = musicTracks[state.musicIndex];
+  bgMusic.currentTime = 0;
+  bgMusic.play().catch(() => {
+    state.musicStarted = false;
+  });
+}
+
+function startMusic() {
+  if (!state.musicEnabled) return;
+  state.musicStarted = true;
+  if (!bgMusic.src) playMusicTrack();
+  else bgMusic.play().catch(() => {
+    state.musicStarted = false;
+  });
+}
+
+function pauseMusic() {
+  bgMusic.pause();
+}
+
+function toggleMusic() {
+  state.musicEnabled = !state.musicEnabled;
+  musicBtn.textContent = state.musicEnabled ? "♪" : "×";
+  musicBtn.setAttribute("aria-pressed", String(state.musicEnabled));
+
+  if (!state.musicEnabled) {
+    pauseMusic();
+    return;
+  }
+
+  if (state.mode === "playing") startMusic();
+}
+
 function resetGame() {
   state.mode = "playing";
   state.elapsed = 0;
@@ -262,22 +306,26 @@ function resetGame() {
   endPanel.classList.add("hidden");
   pauseBtn.textContent = "Ⅱ";
   updateHud();
+  startMusic();
 }
 
 function endGame() {
   state.mode = "over";
   finalScoreEl.textContent = Math.floor(state.score).toString();
   endPanel.classList.remove("hidden");
+  pauseMusic();
 }
 
 function togglePause() {
   if (state.mode === "playing") {
     state.mode = "paused";
     pauseBtn.textContent = "▶";
+    pauseMusic();
   } else if (state.mode === "paused") {
     state.mode = "playing";
     state.lastFrame = performance.now();
     pauseBtn.textContent = "Ⅱ";
+    startMusic();
   }
 }
 
@@ -945,6 +993,12 @@ dialogueChoicesEl.addEventListener("click", (event) => {
 startBtn.addEventListener("click", () => advanceIntro());
 retryBtn.addEventListener("click", resetGame);
 pauseBtn.addEventListener("click", togglePause);
+musicBtn.addEventListener("click", toggleMusic);
+
+bgMusic.addEventListener("ended", () => {
+  state.musicIndex = (state.musicIndex + 1) % musicTracks.length;
+  if (state.musicStarted && state.musicEnabled && state.mode === "playing") playMusicTrack();
+});
 
 asset.addEventListener("load", () => {
   state.sprite = buildSpriteFromImage(asset);
@@ -956,6 +1010,7 @@ asset.addEventListener("error", () => {
 
 resize();
 state.sprite = buildFallbackSprite();
+musicBtn.setAttribute("aria-pressed", "true");
 renderIntroDialogue();
 state.lastFrame = performance.now();
 requestAnimationFrame(frame);

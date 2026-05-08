@@ -58,7 +58,7 @@ button {
   right: clamp(10px, 2.6vw, 24px);
   z-index: 3;
   display: grid;
-  grid-template-columns: repeat(5, minmax(74px, max-content)) 44px;
+  grid-template-columns: repeat(5, minmax(74px, max-content)) 44px 44px;
   gap: 8px;
   align-items: center;
   pointer-events: none;
@@ -347,6 +347,11 @@ h2 {
     grid-column: 3 / 4;
     grid-row: 2;
     width: 100%;
+  }
+
+  #pauseBtn {
+    grid-column: 3 / 4;
+    grid-row: 1;
   }
 
   .xp-panel {
