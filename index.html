@@ -45,9 +45,16 @@
       </header>
 
       <section id="startPanel" class="modal" role="dialog" aria-modal="true">
-        <div class="modal-panel">
-          <p class="eyebrow">PROLOGUE</p>
-          <h1>Saki Takes Off</h1>
+        <div class="intro-scene">
+          <div class="intro-title">
+            <p class="eyebrow">PROLOGUE</p>
+            <h1>Saki Takes Off</h1>
+          </div>
+          <div class="intro-saki" aria-hidden="true">
+            <canvas id="introSaki" width="88" height="124"></canvas>
+          </div>
+        </div>
+        <div class="conversation-frame">
           <div class="dialogue-box">
             <span id="speakerName" class="speaker">Saki</span>
             <p id="dialogueText">Hey... can you help me?</p>
@@ -57,6 +64,7 @@
             <button class="choice-button" type="button" data-choice="Sure">2. Sure</button>
           </div>
           <button id="startBtn" class="primary-button hidden" type="button">Next</button>
+          <div class="mouse-hint" aria-hidden="true"></div>
         </div>
       </section>
 

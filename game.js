@@ -1,5 +1,7 @@
 const canvas = document.querySelector("#game");
 const ctx = canvas.getContext("2d");
+const introSakiCanvas = document.querySelector("#introSaki");
+const introSakiCtx = introSakiCanvas.getContext("2d");
 
 const scoreEl = document.querySelector("#score");
 const shieldEl = document.querySelector("#shield");
@@ -238,6 +240,15 @@ function renderIntroDialogue() {
   dialogueChoicesEl.classList.toggle("hidden", !line.choices);
   startBtn.classList.toggle("hidden", Boolean(line.choices));
   startBtn.textContent = state.introIndex >= introLines.length - 1 ? "Start Game" : "Next";
+}
+
+function renderIntroSaki() {
+  if (!introSakiCtx) return;
+
+  const sprite = state.sprite || buildFallbackSprite();
+  introSakiCtx.clearRect(0, 0, introSakiCanvas.width, introSakiCanvas.height);
+  introSakiCtx.imageSmoothingEnabled = false;
+  introSakiCtx.drawImage(sprite, 0, 0, introSakiCanvas.width, introSakiCanvas.height);
 }
 
 function advanceIntro(choice = "") {
@@ -929,7 +940,6 @@ function drawIntroPreview() {
   if (state.mode !== "intro") return;
   state.player.x = state.width * 0.22 + Math.sin(state.time * 1.5) * 10;
   state.player.y = state.height * 0.58 + Math.sin(state.time * 2) * 7;
-  drawPlayer();
 }
 
 function draw() {
@@ -1045,6 +1055,7 @@ bgMusic.addEventListener("ended", () => {
 
 asset.addEventListener("load", () => {
   state.sprite = buildSpriteFromImage(asset);
+  renderIntroSaki();
 });
 
 asset.addEventListener("error", () => {
@@ -1053,6 +1064,7 @@ asset.addEventListener("error", () => {
 
 resize();
 state.sprite = buildFallbackSprite();
+renderIntroSaki();
 musicBtn.setAttribute("aria-pressed", "true");
 renderIntroDialogue();
 state.lastFrame = performance.now();
