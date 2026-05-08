@@ -25,6 +25,11 @@ const asset = new Image();
 asset.src = "assets/character-source.png";
 
 const musicTracks = ["assets/music/skybit-dogfight.mp3", "assets/music/skybit-dogfight-alt.mp3"];
+const introMusic = new Audio("assets/music/conversation-theme.mp4");
+introMusic.preload = "auto";
+introMusic.volume = 0.34;
+introMusic.loop = true;
+
 const bgMusic = new Audio();
 bgMusic.preload = "auto";
 bgMusic.volume = 0.36;
@@ -252,6 +257,7 @@ function renderIntroSaki() {
 }
 
 function advanceIntro(choice = "") {
+  startIntroMusic();
   if (choice) state.introChoice = choice;
 
   if (state.introIndex < introLines.length - 1) {
@@ -261,6 +267,20 @@ function advanceIntro(choice = "") {
   }
 
   resetGame();
+}
+
+function startIntroMusic() {
+  if (!state.musicEnabled || state.mode !== "intro") return;
+  introMusic.play().catch(() => {});
+}
+
+function pauseIntroMusic() {
+  introMusic.pause();
+}
+
+function stopIntroMusic() {
+  introMusic.pause();
+  introMusic.currentTime = 0;
 }
 
 function playMusicTrack() {
@@ -291,14 +311,17 @@ function toggleMusic() {
   musicBtn.setAttribute("aria-pressed", String(state.musicEnabled));
 
   if (!state.musicEnabled) {
+    pauseIntroMusic();
     pauseMusic();
     return;
   }
 
+  if (state.mode === "intro") startIntroMusic();
   if (state.mode === "playing") startMusic();
 }
 
 function resetGame() {
+  stopIntroMusic();
   state.mode = "playing";
   state.elapsed = 0;
   state.score = 0;
