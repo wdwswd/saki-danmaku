@@ -207,7 +207,7 @@ const isTextEntryTarget = (target) =>
   target instanceof HTMLSelectElement ||
   target?.isContentEditable;
 const nextLevelCost = (level) => 24 + level * 12;
-const maxParticles = 170;
+const maxParticles = 120;
 const bulletPalettes = [
   { core: "#5df0c4", accent: "#c9fff2", glow: "rgba(93, 240, 196, 0.8)", trail: "rgba(93, 240, 196, 0.24)" },
   { core: "#ffd166", accent: "#fff0a8", glow: "rgba(255, 209, 102, 0.86)", trail: "rgba(255, 209, 102, 0.28)" },
@@ -225,7 +225,7 @@ const dist2 = (ax, ay, bx, by) => {
 };
 
 function resize() {
-  state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  state.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   state.width = window.innerWidth;
   state.height = window.innerHeight;
   canvas.width = Math.floor(state.width * state.dpr);
@@ -1102,6 +1102,7 @@ function fireBullet(force = false) {
       trail: palette.trail,
       tier,
       power,
+      shape: tier % 5,
       spin: random(0, Math.PI * 2),
     });
   }
@@ -1190,10 +1191,9 @@ function triggerBulletUpgrade(tier) {
   const palette = bulletPalettes[tier % bulletPalettes.length];
   state.upgradeTimer = 2.2;
   state.upgradeTier = tier;
-  state.shake = Math.max(state.shake, 7 + Math.min(4, tier));
-  spawnBurst(state.player.x + 36, state.player.y - 10, palette.core, 26);
+  state.shake = Math.max(state.shake, 5 + Math.min(3, tier));
+  spawnBurst(state.player.x + 36, state.player.y - 10, palette.core, 14);
   spawnShockwave(state.player.x + 34, state.player.y - 8, palette.core, 1);
-  spawnShockwave(state.player.x + 34, state.player.y - 8, palette.accent, 0.58);
 }
 
 function triggerScoreSurprise(milestone) {
@@ -1242,11 +1242,11 @@ function spawnShockwave(x, y, color, alpha = 1) {
 }
 
 function spawnEnemyBreak(enemy) {
-  spawnBurst(enemy.x, enemy.y, enemy.color, 13);
-  spawnBurst(enemy.x, enemy.y, "#fff7fb", 5);
-  spawnShockwave(enemy.x, enemy.y, enemy.color, 0.48);
+  spawnBurst(enemy.x, enemy.y, enemy.color, 7);
+  spawnBurst(enemy.x, enemy.y, "#fff7fb", 2);
+  spawnShockwave(enemy.x, enemy.y, enemy.color, 0.34);
 
-  const count = Math.min(8, Math.max(0, maxParticles - state.particles.length));
+  const count = Math.min(4, Math.max(0, maxParticles - state.particles.length));
   for (let i = 0; i < count; i += 1) {
     state.particles.push({
       x: enemy.x + random(-enemy.width * 0.34, enemy.width * 0.34),
@@ -1579,20 +1579,20 @@ function drawBackground() {
   const palette = activeBulletPalette();
   const pulse = 0.5 + Math.sin(state.time * 1.2) * 0.5;
   const gradient = ctx.createLinearGradient(0, 0, state.width, state.height);
-  gradient.addColorStop(0, "#151218");
-  gradient.addColorStop(0.44, palette.trail);
-  gradient.addColorStop(1, "#101b1d");
+  gradient.addColorStop(0, "#07070b");
+  gradient.addColorStop(0.52, "#101018");
+  gradient.addColorStop(1, "#05070a");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, state.width, state.height);
 
   ctx.save();
-  ctx.globalAlpha = 0.06 + pulse * 0.04;
+  ctx.globalAlpha = 0.025 + pulse * 0.018;
   ctx.fillStyle = palette.core;
   ctx.fillRect(0, 0, state.width, state.height);
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = 0.24;
+  ctx.globalAlpha = 0.14;
   ctx.strokeStyle = palette.trail;
   ctx.lineWidth = 1;
   const gap = 64;
@@ -1606,8 +1606,8 @@ function drawBackground() {
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = 0.18;
-  for (let i = 0; i < 36; i += 1) {
+  ctx.globalAlpha = 0.12;
+  for (let i = 0; i < 24; i += 1) {
     const x = (i * 149 + state.time * (12 + (i % 4) * 5)) % (state.width + 36);
     const y = (i * 83) % state.height;
     const size = 2 + (i % 3);
@@ -1821,52 +1821,56 @@ function drawBullets() {
   for (const bullet of state.bullets) {
     const power = bullet.power || bullet.tier || 0;
     const spin = bullet.spin || 0;
-    const flare = 1 + Math.sin(state.time * 18 + spin) * 0.08;
+    const shape = bullet.shape || 0;
+    const flare = 1 + Math.sin(state.time * 14 + spin) * 0.06;
+    const coreLength = 14 + power * 3;
+    const coreHeight = 6 + Math.min(4, power);
 
     ctx.save();
     ctx.translate(bullet.x, bullet.y);
-    ctx.globalAlpha = 0.42 + Math.min(0.28, power * 0.04);
+
+    ctx.globalAlpha = 0.28 + Math.min(0.2, power * 0.03);
     ctx.fillStyle = bullet.trail || "rgba(93, 240, 196, 0.24)";
-    ctx.fillRect(-20 - power * 5, -2, 18 + power * 4, 4);
+    ctx.fillRect(-18 - power * 4, -2, 16 + power * 3, 4);
     if (power >= 2) {
-      ctx.fillRect(-14 - power * 2, -8, 12 + power * 2, 3);
-      ctx.fillRect(-14 - power * 2, 5, 12 + power * 2, 3);
-    }
-    if (power >= 4) {
-      ctx.fillRect(-26 - power * 2, -13, 20 + power * 2, 2);
-      ctx.fillRect(-26 - power * 2, 11, 20 + power * 2, 2);
+      ctx.fillRect(-12 - power * 2, -7, 10 + power * 2, 3);
+      ctx.fillRect(-12 - power * 2, 4, 10 + power * 2, 3);
     }
 
     ctx.globalAlpha = 1;
     ctx.fillStyle = bullet.color;
-    ctx.shadowColor = bullet.glow || bullet.color;
-    ctx.shadowBlur = 8 + power * 3;
-    ctx.fillRect(-5, (-3 - power * 0.5) * flare, 13 + power * 4, 6 + power);
-    ctx.fillRect(2, -6 - power, 4 + power, 12 + power * 2);
-    if (power >= 1) {
-      ctx.fillStyle = bullet.accent || "#ffffff";
-      ctx.fillRect(4, -2 - power * 0.3, 8 + power * 2, 4 + power * 0.5);
+
+    if (shape === 0) {
+      ctx.fillRect(-5, -coreHeight * 0.5 * flare, coreLength, coreHeight);
+      ctx.fillRect(2, -coreHeight, 4 + power, coreHeight * 2);
+    } else if (shape === 1) {
+      ctx.fillRect(-3, -coreHeight * 0.5, coreLength - 2, coreHeight);
+      ctx.fillRect(2, -coreHeight - 3, coreHeight, coreHeight);
+      ctx.fillRect(2, 3, coreHeight, coreHeight);
+      ctx.fillRect(coreLength - 2, -2, 5 + power, 4);
+    } else if (shape === 2) {
+      ctx.rotate(Math.PI * 0.25);
+      const size = 8 + power * 1.5;
+      ctx.fillRect(-size * 0.5, -size * 0.5, size, size);
+      ctx.rotate(-Math.PI * 0.25);
+      ctx.fillRect(3, -2, coreLength + 2, 4);
+    } else if (shape === 3) {
+      ctx.fillRect(-4, -coreHeight - 2, coreLength, coreHeight - 1);
+      ctx.fillRect(-4, 3, coreLength, coreHeight - 1);
+      ctx.fillRect(4, -3, coreLength + 4, 6);
+    } else {
+      const size = 11 + power * 2;
+      ctx.fillRect(-2, -size * 0.5, size, 3);
+      ctx.fillRect(-2, size * 0.5 - 3, size, 3);
+      ctx.fillRect(-2, -size * 0.5, 3, size);
+      ctx.fillRect(size - 5, -size * 0.5, 3, size);
+      ctx.fillRect(4, -2, coreLength, 4);
     }
-    if (power >= 3) {
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(3, -2, 10 + power * 2, 4);
-      ctx.strokeStyle = bullet.accent || bullet.color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-8 - power * 2, 0);
-      ctx.lineTo(1, -8 - power);
-      ctx.lineTo(14 + power * 4, 0);
-      ctx.lineTo(1, 8 + power);
-      ctx.closePath();
-      ctx.stroke();
-    }
-    if (power >= 5) {
-      ctx.globalAlpha = 0.82;
-      ctx.strokeStyle = bullet.glow || bullet.color;
-      ctx.lineWidth = 2;
-      const ring = 20 + Math.sin(state.time * 22 + spin) * 4;
-      ctx.strokeRect(6 + power * 1.5 - ring * 0.5, -ring * 0.5, ring, ring);
-    }
+
+    ctx.fillStyle = bullet.accent || "#ffffff";
+    ctx.fillRect(4, -2, Math.max(8, coreLength - 4), 4);
+    if (power >= 4) ctx.fillRect(coreLength + 1, -5, 4, 10);
+
     ctx.restore();
   }
 }
@@ -2011,14 +2015,14 @@ function drawBulletUpgradeShock() {
   const y = state.player.y - 8;
 
   ctx.save();
-  ctx.globalAlpha = alpha * 0.22;
+  ctx.globalAlpha = alpha * 0.12;
   ctx.fillStyle = palette.core;
   ctx.fillRect(0, 0, state.width, state.height);
 
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = palette.accent;
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 3; i += 1) {
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 2; i += 1) {
     const radius = (1 - alpha) * (74 + i * 38) + i * 16;
     const pixel = 8;
     const left = Math.round((x - radius) / pixel) * pixel;
@@ -2029,8 +2033,6 @@ function drawBulletUpgradeShock() {
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.shadowColor = palette.glow;
-  ctx.shadowBlur = 10;
   ctx.font = "900 30px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.fillText(`BULLET LV ${state.upgradeTier + 1}`, state.width * 0.5, playTop() + 52);
