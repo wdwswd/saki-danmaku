@@ -30,6 +30,8 @@ const leaderboardStatusEl = document.querySelector("#leaderboardStatus");
 const leaderboardNameEl = document.querySelector("#leaderboardName");
 const leaderboardSubmitBtn = document.querySelector("#leaderboardSubmitBtn");
 const leaderboardListEl = document.querySelector("#leaderboardList");
+const giftPanel = document.querySelector("#giftPanel");
+const giftMessageEl = document.querySelector("#giftMessage");
 const submitScoreBtn = document.querySelector("#submitScoreBtn");
 const skipScoreBtn = document.querySelector("#skipScoreBtn");
 const recordScoreBlock = document.querySelector("#recordScoreBlock");
@@ -161,8 +163,14 @@ const state = {
   musicStarted: false,
   musicIndex: 0,
   spawnTimer: 0.5,
+  giftSpawnTimer: 42,
   fireTimer: 0,
   shake: 0,
+  bulletLineBonus: 0,
+  fireRateBonus: 0,
+  sakuraEnabled: false,
+  sakuraCooldown: 0,
+  giftResumeOnClose: false,
   player: {
     x: 120,
     y: 260,
@@ -249,10 +257,14 @@ function roundRect(context, x, y, width, height, radius) {
 
 function buildSpriteFromImage(image) {
   const low = document.createElement("canvas");
-  low.width = 44;
-  low.height = 62;
+  const detail = 2;
+  const virtualWidth = 44;
+  const virtualHeight = 62;
+  low.width = virtualWidth * detail;
+  low.height = virtualHeight * detail;
   const px = low.getContext("2d");
   px.imageSmoothingEnabled = false;
+  px.scale(detail, detail);
   px.clearRect(0, 0, low.width, low.height);
 
   px.fillStyle = "rgba(12, 12, 15, 0.88)";
@@ -266,8 +278,10 @@ function buildSpriteFromImage(image) {
   px.ellipse(22, 22, 18, 21, 0, 0, Math.PI * 2);
   px.rect(9, 32, 26, 26);
   px.clip();
-  px.drawImage(image, 58, 18, 732, 1032, 0, 0, low.width, low.height);
+  px.imageSmoothingEnabled = true;
+  px.drawImage(image, 58, 18, 732, 1032, 0, 0, virtualWidth, virtualHeight);
   px.restore();
+  px.imageSmoothingEnabled = false;
 
   px.fillStyle = "rgba(9, 9, 12, 0.82)";
   px.fillRect(6, 14, 5, 30);
@@ -457,7 +471,7 @@ function getDressedSprite(baseSprite, clean = false) {
   px.clearRect(0, 0, dressed.width, dressed.height);
   px.drawImage(baseSprite, 0, 0);
 
-  const unit = clean ? 2 : 1;
+  const unit = clean ? 2 : baseSprite.width / 44;
   const offsetX = clean ? 2 : 0;
   const offsetY = clean ? 2 : 0;
   rebuildCharacterForOutfit(px, state.equippedOutfit, clean);
@@ -470,7 +484,7 @@ function getDressedSprite(baseSprite, clean = false) {
 }
 
 function rebuildCharacterForOutfit(context, outfitId, clean = false) {
-  const unit = clean ? 2 : 1;
+  const unit = clean ? 2 : context.canvas.width / 44;
   const offsetX = clean ? 2 : 0;
   const offsetY = clean ? 2 : 0;
   const px = (x, y, w, h, color) => {
@@ -656,7 +670,7 @@ function drawCleanOutfitDetails(context, outfitId) {
 }
 
 function redrawSakiFeatures(context, clean = false) {
-  const unit = clean ? 2 : 1;
+  const unit = clean ? 2 : context.canvas.width / 44;
   const offsetX = clean ? 2 : 0;
   const offsetY = clean ? 2 : 0;
   const px = (x, y, w, h, color) => {
@@ -790,6 +804,44 @@ function closeShop() {
     startMusic();
   }
   state.shopResumeOnClose = false;
+}
+
+function openGiftReward() {
+  if (!giftPanel) return;
+  state.giftResumeOnClose = state.mode === "playing";
+  if (state.giftResumeOnClose) {
+    state.mode = "paused";
+    pauseBtn.textContent = "▶";
+    pauseMusic();
+  }
+  giftMessageEl.textContent = "The rare gift broke open. Pick one reward for this run.";
+  giftPanel.classList.remove("hidden");
+}
+
+function chooseGiftReward(type) {
+  if (type === "line") {
+    state.bulletLineBonus += 1;
+    giftMessageEl.textContent = `Bullet lines upgraded: +${state.bulletLineBonus}.`;
+  } else if (type === "frequency") {
+    state.fireRateBonus += 1;
+    giftMessageEl.textContent = `Shooting speed upgraded: +${state.fireRateBonus}.`;
+  } else if (type === "sakura") {
+    state.sakuraEnabled = true;
+    giftMessageEl.textContent = "Sakura effects unlocked for this run.";
+  }
+
+  spawnBurst(state.player.x + 34, state.player.y - 14, type === "sakura" ? "#ff8fbd" : "#ffd166", 18);
+  spawnShockwave(state.player.x + 34, state.player.y - 8, type === "sakura" ? "#ff8fbd" : "#ffd166", 0.8);
+  if (type === "sakura") spawnSakuraPetals(state.player.x + 34, state.player.y - 10, 18);
+
+  giftPanel.classList.add("hidden");
+  if (state.giftResumeOnClose && state.mode === "paused") {
+    state.mode = "playing";
+    state.lastFrame = performance.now();
+    pauseBtn.textContent = "Ⅱ";
+    startMusic();
+  }
+  state.giftResumeOnClose = false;
 }
 
 function openMessagePanel() {
@@ -1100,6 +1152,7 @@ function setGameType(gameType) {
   closeShop();
   closeMessagePanel();
   closeLeaderboard();
+  giftPanel?.classList.add("hidden");
   updateGameModeButtons();
   state.pointer.active = false;
   state.bullets.length = 0;
@@ -1147,8 +1200,14 @@ function resetDanmakuGame() {
   state.upgradeTimer = 0;
   state.upgradeTier = 0;
   state.spawnTimer = 0.16;
+  state.giftSpawnTimer = random(34, 58);
   state.fireTimer = 0.08;
   state.shake = 0;
+  state.bulletLineBonus = 0;
+  state.fireRateBonus = 0;
+  state.sakuraEnabled = false;
+  state.sakuraCooldown = 0;
+  state.giftResumeOnClose = false;
   state.bullets.length = 0;
   state.enemies.length = 0;
   state.particles.length = 0;
@@ -1176,8 +1235,14 @@ function resetDandruffGame() {
   state.cheerTimer = 0;
   state.upgradeTimer = 0;
   state.spawnTimer = 0;
+  state.giftSpawnTimer = 999;
   state.fireTimer = 0;
   state.shake = 0;
+  state.bulletLineBonus = 0;
+  state.fireRateBonus = 0;
+  state.sakuraEnabled = false;
+  state.sakuraCooldown = 0;
+  state.giftResumeOnClose = false;
   state.bullets.length = 0;
   state.enemies.length = 0;
   state.particles.length = 0;
@@ -1205,6 +1270,8 @@ function resetDandruffGame() {
 
 function endGame() {
   state.mode = "over";
+  giftPanel?.classList.add("hidden");
+  state.giftResumeOnClose = false;
   state.leaderboardScore = state.gameType === "danmaku" ? Math.floor(state.score) : 0;
   finalScoreEl.textContent = Math.floor(state.score).toString();
   resetEndScorePrompt();
@@ -1246,7 +1313,8 @@ function updateHud() {
 }
 
 function spriteScale() {
-  return clamp(state.width / 430, 1.75, 2.45);
+  const detailScale = (state.sprite?.width || 44) / 44;
+  return clamp(state.width / 430, 1.75, 2.45) / detailScale;
 }
 
 function scoreTier() {
@@ -1263,6 +1331,17 @@ function activeBulletPalette() {
 
 function hardModeLevel() {
   return Math.max(0, Math.floor((state.score - 12500) / 4000) + 1);
+}
+
+function bonusBulletSpread(baseSpread) {
+  if (!state.bulletLineBonus) return baseSpread;
+  const spread = [...baseSpread];
+  for (let i = 0; i < state.bulletLineBonus; i += 1) {
+    const pair = Math.floor(i / 2);
+    const direction = i % 2 === 0 ? 1 : -1;
+    spread.push(direction * (0.18 + pair * 0.035));
+  }
+  return spread.sort((a, b) => a - b);
 }
 
 function playTop() {
@@ -1317,7 +1396,7 @@ function fireBullet(force = false) {
   const tier = scoreTier();
   const power = bulletPowerTier();
   const levelSpread = Math.min(2, Math.floor((state.level - 1) / 2));
-  const spread =
+  const baseSpread =
     Math.max(power, levelSpread) === 0
       ? [0]
       : Math.max(power, levelSpread) === 1
@@ -1327,8 +1406,10 @@ function fireBullet(force = false) {
           : power >= 3
           ? [-0.12, -0.045, 0.045, 0.12]
           : [-0.08, 0, 0.08];
+  const spread = bonusBulletSpread(baseSpread);
   const palette = bulletPalettes[tier % bulletPalettes.length];
-  const fireDelay = Math.max(0.058, 0.16 - (state.level - 1) * 0.008 - power * 0.009);
+  const baseDelay = 0.16 - (state.level - 1) * 0.008 - power * 0.009;
+  const fireDelay = Math.max(0.04, baseDelay * Math.pow(0.84, state.fireRateBonus));
 
   for (const offset of spread) {
     state.bullets.push({
@@ -1347,6 +1428,10 @@ function fireBullet(force = false) {
       shape: tier % 8,
       spin: random(0, Math.PI * 2),
     });
+  }
+
+  if (state.sakuraEnabled && state.particles.length < maxParticles - 4) {
+    spawnSakuraPetals(state.player.x + 28, state.player.y - 12, 3);
   }
 
   state.player.muzzle = 0.11 + power * 0.006;
@@ -1387,6 +1472,33 @@ function spawnEnemy() {
 
   const next = 0.31 - Math.min(0.08, state.elapsed / 180) - hard * 0.012 + random(-0.035, 0.055);
   state.spawnTimer = Math.max(hard > 0 ? 0.16 : 0.2, next);
+}
+
+function spawnGiftEnemy() {
+  const hard = hardModeLevel();
+  const hp = 46 + Math.min(30, scoreTier() * 5 + hard * 3);
+  const width = 156;
+  const height = 58;
+
+  state.enemies.push({
+    gift: true,
+    x: state.width + width,
+    y: random(playTop() + 34, Math.max(playTop() + 80, state.height - 80)),
+    baseY: 0,
+    width,
+    height,
+    hp,
+    maxHp: hp,
+    speed: 48 + Math.min(30, state.elapsed * 0.18) + hard * 3,
+    wobble: random(0.45, 0.95),
+    phase: random(0, Math.PI * 2),
+    text: "RARE GIFT",
+    color: "#ffd166",
+    fill: "rgba(255, 209, 102, 0.18)",
+  });
+
+  state.giftSpawnTimer = random(55, 92);
+  state.spawnTimer = Math.max(state.spawnTimer, 0.34);
 }
 
 function addGoldReward(enemy) {
@@ -1464,6 +1576,26 @@ function spawnBurst(x, y, color, amount = 12) {
   }
 }
 
+function spawnSakuraPetals(x, y, amount = 6) {
+  const available = Math.max(0, maxParticles - state.particles.length);
+  const count = Math.min(amount, available);
+  for (let i = 0; i < count; i += 1) {
+    state.particles.push({
+      x: x + random(-8, 8),
+      y: y + random(-10, 10),
+      vx: random(-90, -22),
+      vy: random(-42, 34),
+      size: random(3, 5),
+      life: random(0.55, 0.9),
+      maxLife: 0.9,
+      color: i % 2 === 0 ? "#ffd4e8" : "#ff8fbd",
+      sakura: true,
+      spin: random(-4, 4),
+      rotation: random(0, Math.PI * 2),
+    });
+  }
+}
+
 function spawnShockwave(x, y, color, alpha = 1) {
   if (state.particles.length >= maxParticles) return;
   state.particles.push({
@@ -1484,9 +1616,10 @@ function spawnShockwave(x, y, color, alpha = 1) {
 }
 
 function spawnEnemyBreak(enemy) {
-  spawnBurst(enemy.x, enemy.y, enemy.color, 7);
+  spawnBurst(enemy.x, enemy.y, enemy.color, enemy.gift ? 14 : 7);
   spawnBurst(enemy.x, enemy.y, "#fff7fb", 2);
-  spawnShockwave(enemy.x, enemy.y, enemy.color, 0.34);
+  spawnShockwave(enemy.x, enemy.y, enemy.color, enemy.gift ? 0.72 : 0.34);
+  if (enemy.gift) spawnSakuraPetals(enemy.x, enemy.y, 10);
 
   const count = Math.min(4, Math.max(0, maxParticles - state.particles.length));
   for (let i = 0; i < count; i += 1) {
@@ -1731,6 +1864,7 @@ function updateWorld(dt) {
   state.elapsed += dt;
   state.fireTimer -= dt;
   state.spawnTimer -= dt;
+  state.giftSpawnTimer -= dt;
   state.shake = Math.max(0, state.shake - dt * 42);
   state.levelPulse = Math.max(0, state.levelPulse - dt);
   state.cheerTimer = Math.max(0, state.cheerTimer - dt);
@@ -1742,10 +1876,14 @@ function updateWorld(dt) {
   if (state.spawnTimer <= 0) {
     const hard = hardModeLevel();
     const enemyCap = 20 + Math.min(10, hard * 2);
-    spawnEnemy();
-    if (state.enemies.length < enemyCap && state.elapsed > 18 && Math.random() > 0.58) spawnEnemy();
-    if (state.enemies.length < enemyCap && hard > 0 && Math.random() < Math.min(0.16 + hard * 0.04, 0.38)) {
+    if (state.giftSpawnTimer <= 0 && !state.enemies.some((enemy) => enemy.gift)) {
+      spawnGiftEnemy();
+    } else {
       spawnEnemy();
+      if (state.enemies.length < enemyCap && state.elapsed > 18 && Math.random() > 0.58) spawnEnemy();
+      if (state.enemies.length < enemyCap && hard > 0 && Math.random() < Math.min(0.16 + hard * 0.04, 0.38)) {
+        spawnEnemy();
+      }
     }
   }
 
@@ -1757,6 +1895,7 @@ function updateWorld(dt) {
   state.bullets = state.bullets.filter(
     (bullet) => bullet.life > 0 && bullet.x < state.width + 40 && bullet.y > -40 && bullet.y < state.height + 40,
   );
+  if (state.bullets.length > 220) state.bullets.splice(0, state.bullets.length - 220);
 
   for (const enemy of state.enemies) {
     enemy.phase += enemy.wobble * dt;
@@ -1777,6 +1916,7 @@ function updateWorld(dt) {
           state.score += 12 + Math.min(34, state.combo * 2);
           addGoldReward(enemy);
           spawnEnemyBreak(enemy);
+          if (enemy.gift) openGiftReward();
           if (state.combo > 0 && state.combo % 12 === 0 && state.shield < 7) state.shield += 1;
           updateHud();
         }
@@ -1788,9 +1928,13 @@ function updateWorld(dt) {
 
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
+    if (enemy.gift && enemy.x + enemy.width * 0.5 < -10) {
+      enemy.dead = true;
+      continue;
+    }
     if (enemyHitsPlayer(enemy) && state.player.invuln <= 0) {
       enemy.dead = true;
-      damageShield(1);
+      if (!enemy.gift) damageShield(1);
     } else if (enemy.x + enemy.width * 0.5 < -10) {
       enemy.dead = true;
       damageShield(1);
@@ -1814,6 +1958,7 @@ function updateParticles(dt) {
       particle.vx *= 0.96;
       particle.vy *= 0.96;
     }
+    if (particle.sakura) particle.rotation += particle.spin * dt;
     particle.life -= dt;
   }
   state.particles = state.particles.filter((particle) => particle.life > 0);
@@ -2045,6 +2190,11 @@ function drawEnemies() {
     const top = enemy.y - enemy.height * 0.5;
     const pixel = 4;
 
+    if (enemy.gift) {
+      drawGiftEnemy(enemy, left, top, pixel);
+      continue;
+    }
+
     ctx.save();
     ctx.fillStyle = enemy.fill;
     ctx.fillRect(left + pixel, top, enemy.width - pixel * 2, enemy.height);
@@ -2087,6 +2237,43 @@ function drawEnemies() {
   }
 }
 
+function drawGiftEnemy(enemy, left, top, pixel) {
+  const ratio = clamp(enemy.hp / enemy.maxHp, 0, 1);
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 209, 102, 0.2)";
+  ctx.fillRect(left + pixel, top, enemy.width - pixel * 2, enemy.height);
+  ctx.fillRect(left, top + pixel, enemy.width, enemy.height - pixel * 2);
+  ctx.fillStyle = "#08070b";
+  ctx.fillRect(left + pixel, top + pixel, enemy.width - pixel * 2, pixel);
+  ctx.fillRect(left + pixel, top + enemy.height - pixel * 2, enemy.width - pixel * 2, pixel);
+  ctx.fillRect(left + pixel, top + pixel, pixel, enemy.height - pixel * 2);
+  ctx.fillRect(left + enemy.width - pixel * 2, top + pixel, pixel, enemy.height - pixel * 2);
+
+  ctx.fillStyle = "#ffd166";
+  ctx.fillRect(left + 16, top + 16, 30, 26);
+  ctx.fillStyle = "#fff0a8";
+  ctx.fillRect(left + 20, top + 12, 10, 8);
+  ctx.fillRect(left + 32, top + 12, 10, 8);
+  ctx.fillStyle = "#ff63a8";
+  ctx.fillRect(left + 28, top + 12, 6, 30);
+  ctx.fillRect(left + 16, top + 24, 30, 6);
+
+  ctx.font = "900 15px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.fillStyle = "#fff7fb";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(enemy.text, left + 56, top + 22);
+  ctx.fillStyle = "#ffd166";
+  ctx.fillText(`${enemy.hp}/${enemy.maxHp}`, left + 56, top + 40);
+
+  const barWidth = enemy.width - 24;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+  ctx.fillRect(left + 12, top + enemy.height - 8, barWidth, 4);
+  ctx.fillStyle = "#ffd166";
+  ctx.fillRect(left + 12, top + enemy.height - 8, barWidth * ratio, 4);
+  ctx.restore();
+}
+
 function drawParticles() {
   for (const particle of state.particles) {
     const alpha = clamp(particle.life / particle.maxLife, 0, 1);
@@ -2112,6 +2299,18 @@ function drawParticles() {
       ctx.translate(particle.x, particle.y);
       if (particle.emote === "heart") drawPixelHeart(0, 0, particle.size, particle.color);
       else drawPixelSmile(0, 0, particle.size, particle.color);
+      ctx.restore();
+    } else if (particle.sakura) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(Math.round(particle.x), Math.round(particle.y));
+      ctx.rotate(particle.rotation || 0);
+      ctx.fillStyle = particle.color;
+      const unit = Math.max(2, Math.round(particle.size));
+      ctx.fillRect(-unit, -unit * 2, unit * 2, unit);
+      ctx.fillRect(0, -unit, unit, unit * 3);
+      ctx.fillStyle = "#fff7fb";
+      ctx.fillRect(0, 0, unit, unit);
       ctx.restore();
     } else if (particle.text) {
       ctx.globalAlpha = alpha;
@@ -2639,6 +2838,11 @@ encryptMessageBtn?.addEventListener("click", () => {
 closeLeaderboardBtn.addEventListener("click", closeLeaderboard);
 leaderboardPanel.addEventListener("click", (event) => {
   if (event.target === leaderboardPanel) closeLeaderboard();
+});
+giftPanel?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-gift]");
+  if (!button) return;
+  chooseGiftReward(button.dataset.gift);
 });
 leaderboardSubmitBtn.addEventListener("click", submitLeaderboardScore);
 submitScoreBtn.addEventListener("click", showEndScoreNamePrompt);

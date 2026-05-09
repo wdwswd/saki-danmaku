@@ -54,14 +54,14 @@ button {
 
 .hud {
   position: absolute;
-  top: clamp(10px, 2.6vw, 24px);
-  left: clamp(10px, 2.6vw, 24px);
-  right: clamp(10px, 2.6vw, 24px);
+  top: 18px;
+  left: 18px;
+  right: 18px;
   z-index: 3;
   display: grid;
-  grid-template-columns: minmax(220px, max-content) repeat(3, minmax(74px, max-content)) 44px 44px 44px 44px;
+  grid-template-columns: 220px 110px 72px 112px repeat(4, 46px);
   gap: 8px;
-  align-items: center;
+  align-items: start;
   pointer-events: none;
 }
 
@@ -104,7 +104,7 @@ button {
 .meter,
 .icon-button,
 .xp-panel {
-  min-height: 42px;
+  min-height: 46px;
   border: 2px solid var(--line);
   background: var(--panel);
   box-shadow:
@@ -116,9 +116,9 @@ button {
   display: grid;
   grid-template-columns: auto minmax(30px, auto);
   gap: 9px;
-  align-items: baseline;
-  width: max-content;
-  min-width: 74px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
   padding: 8px 12px;
   border-radius: 0;
 }
@@ -147,52 +147,150 @@ button {
 
 .shield-meter {
   position: relative;
-  min-width: 58px;
-  padding: 6px 9px;
+  padding: 7px 8px;
 }
 
 .shield-meter strong {
   position: absolute;
-  left: 19px;
-  top: 11px;
+  left: 18px;
+  top: 13px;
   min-width: 18px;
   color: #151218;
-  font-size: 14px;
+  font-size: 13px;
   text-align: center;
   z-index: 1;
 }
 
 .pixel-shield {
   display: block;
-  width: 34px;
-  height: 30px;
-  background: #6bd3ff;
-  clip-path: polygon(12% 0, 88% 0, 88% 52%, 50% 100%, 12% 52%);
+  position: relative;
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(3px 3px 0 #08070b);
+}
+
+.pixel-shield::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 2px;
+  width: 4px;
+  height: 4px;
+  background: #f8f1ff;
   box-shadow:
-    inset 0 0 0 4px #f8f1ff,
-    3px 3px 0 #08070b;
+    -12px 0 #f8f1ff,
+    -8px 0 #f8f1ff,
+    -4px 0 #f8f1ff,
+    4px 0 #f8f1ff,
+    8px 0 #f8f1ff,
+    12px 0 #f8f1ff,
+    -16px 4px #f8f1ff,
+    -12px 4px #6bd3ff,
+    -8px 4px #6bd3ff,
+    -4px 4px #6bd3ff,
+    0 4px #6bd3ff,
+    4px 4px #6bd3ff,
+    8px 4px #6bd3ff,
+    12px 4px #6bd3ff,
+    16px 4px #f8f1ff,
+    -16px 8px #f8f1ff,
+    -12px 8px #6bd3ff,
+    -8px 8px #93e3ff,
+    -4px 8px #93e3ff,
+    0 8px #93e3ff,
+    4px 8px #6bd3ff,
+    8px 8px #6bd3ff,
+    12px 8px #6bd3ff,
+    16px 8px #f8f1ff,
+    -16px 12px #f8f1ff,
+    -12px 12px #6bd3ff,
+    -8px 12px #6bd3ff,
+    -4px 12px #6bd3ff,
+    0 12px #6bd3ff,
+    4px 12px #4aa6d8,
+    8px 12px #4aa6d8,
+    12px 12px #6bd3ff,
+    16px 12px #f8f1ff,
+    -12px 16px #f8f1ff,
+    -8px 16px #6bd3ff,
+    -4px 16px #6bd3ff,
+    0 16px #6bd3ff,
+    4px 16px #4aa6d8,
+    8px 16px #4aa6d8,
+    12px 16px #f8f1ff,
+    -8px 20px #f8f1ff,
+    -4px 20px #6bd3ff,
+    0 20px #6bd3ff,
+    4px 20px #4aa6d8,
+    8px 20px #f8f1ff,
+    -4px 24px #f8f1ff,
+    0 24px #6bd3ff,
+    4px 24px #f8f1ff;
 }
 
 .coin-meter {
-  min-width: 82px;
+  min-width: 0;
 }
 
 .pixel-coin {
   display: block;
-  width: 24px;
-  height: 24px;
-  border: 3px solid #fff0a8;
-  border-radius: 50%;
-  background:
-    linear-gradient(90deg, transparent 9px, #b98726 9px 12px, transparent 12px),
-    #ffd166;
+  position: relative;
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(3px 3px 0 #08070b);
+}
+
+.pixel-coin::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  background: #fff0a8;
   box-shadow:
-    inset 0 0 0 3px #d99f33,
-    3px 3px 0 #08070b;
+    -8px 0 #fff0a8,
+    -4px 0 #fff0a8,
+    4px 0 #fff0a8,
+    8px 0 #fff0a8,
+    -12px 4px #fff0a8,
+    -8px 4px #ffd166,
+    -4px 4px #ffd166,
+    0 4px #ffd166,
+    4px 4px #d99f33,
+    8px 4px #d99f33,
+    12px 4px #fff0a8,
+    -12px 8px #fff0a8,
+    -8px 8px #ffd166,
+    -4px 8px #fff0a8,
+    0 8px #ffd166,
+    4px 8px #b98726,
+    8px 8px #d99f33,
+    12px 8px #fff0a8,
+    -12px 12px #fff0a8,
+    -8px 12px #ffd166,
+    -4px 12px #fff0a8,
+    0 12px #ffd166,
+    4px 12px #b98726,
+    8px 12px #d99f33,
+    12px 12px #fff0a8,
+    -12px 16px #fff0a8,
+    -8px 16px #ffd166,
+    -4px 16px #ffd166,
+    0 16px #ffd166,
+    4px 16px #d99f33,
+    8px 16px #d99f33,
+    12px 16px #fff0a8,
+    -8px 20px #fff0a8,
+    -4px 20px #fff0a8,
+    0 20px #fff0a8,
+    4px 20px #fff0a8,
+    8px 20px #fff0a8;
 }
 
 .icon-button {
-  width: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 0;
   color: var(--ink);
   cursor: pointer;
@@ -221,8 +319,8 @@ button {
 
 .xp-panel {
   grid-column: 1 / -1;
-  width: min(520px, 100%);
-  min-height: 54px;
+  width: 520px;
+  min-height: 52px;
   padding: 9px 12px 10px;
   border-radius: 0;
 }
@@ -338,7 +436,8 @@ button {
 
 .shop-panel,
 .crypto-panel,
-.leaderboard-panel {
+.leaderboard-panel,
+.gift-panel {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -358,6 +457,11 @@ button {
 
 .leaderboard-panel {
   width: min(620px, calc(100vw - 64px));
+}
+
+.gift-panel {
+  width: min(680px, calc(100vw - 64px));
+  text-align: center;
 }
 
 .shop-header {
@@ -448,6 +552,126 @@ button {
   border-color: var(--gold);
   background: #3b3142;
   color: var(--gold);
+}
+
+.gift-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gift-choice {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 168px;
+  padding: 14px 12px;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  background: #17131f;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow:
+    4px 4px 0 #08070b,
+    inset 0 0 0 2px rgba(255, 255, 255, 0.04);
+}
+
+.gift-choice:hover,
+.gift-choice:focus-visible {
+  border-color: var(--mint);
+  color: var(--mint);
+  outline: none;
+  transform: translate(2px, 2px);
+  box-shadow:
+    2px 2px 0 #08070b,
+    inset 0 0 0 2px rgba(255, 255, 255, 0.04);
+}
+
+.gift-choice strong {
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.gift-choice small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.gift-icon {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  background: #0c0a11;
+  border: 2px solid #3b3248;
+  image-rendering: pixelated;
+}
+
+.gift-icon-lines::before,
+.gift-icon-speed::before,
+.gift-icon-sakura::before {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+}
+
+.gift-icon-lines::before {
+  left: 12px;
+  top: 14px;
+  background: #5df0c4;
+  box-shadow:
+    6px 0 #5df0c4,
+    12px 0 #c9fff2,
+    18px 0 #c9fff2,
+    24px 0 #5df0c4,
+    0 12px #ffd166,
+    6px 12px #ffd166,
+    12px 12px #fff0a8,
+    18px 12px #fff0a8,
+    24px 12px #ffd166,
+    0 24px #ff63a8,
+    6px 24px #ff63a8,
+    12px 24px #ffd4e8,
+    18px 24px #ffd4e8,
+    24px 24px #ff63a8;
+}
+
+.gift-icon-speed::before {
+  left: 8px;
+  top: 12px;
+  background: #ffd166;
+  box-shadow:
+    6px 0 #ffd166,
+    12px 0 #fff0a8,
+    18px 0 #fff0a8,
+    24px 0 #fff0a8,
+    30px 0 #ffd166,
+    18px 12px #6bd3ff,
+    24px 12px #6bd3ff,
+    30px 12px #e3fbff,
+    36px 12px #6bd3ff,
+    6px 24px #d46bff,
+    12px 24px #d46bff,
+    18px 24px #f5d7ff,
+    24px 24px #d46bff;
+}
+
+.gift-icon-sakura::before {
+  left: 24px;
+  top: 8px;
+  background: #ffd4e8;
+  box-shadow:
+    -6px 6px #ff9bc5,
+    6px 6px #ff9bc5,
+    0 12px #ff63a8,
+    -18px 20px #ffd4e8,
+    -24px 26px #ff9bc5,
+    -12px 26px #ff63a8,
+    16px 24px #ffd4e8,
+    10px 30px #ff9bc5,
+    22px 30px #ff63a8;
 }
 
 .crypto-field {

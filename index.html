@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>弹幕净化战</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -122,6 +123,31 @@
             <button id="leaderboardSubmitBtn" class="primary-button" type="button">Submit Current Score</button>
           </div>
           <ol id="leaderboardList" class="leaderboard-list"></ol>
+        </div>
+      </section>
+
+      <section id="giftPanel" class="modal hidden" role="dialog" aria-modal="true" aria-label="Rare gift reward">
+        <div class="gift-panel">
+          <p class="eyebrow">RARE GIFT</p>
+          <h2>Choose Saki's Boost</h2>
+          <p id="giftMessage" class="shop-message">The gift broke open. Pick one reward for this run.</p>
+          <div class="gift-grid">
+            <button class="gift-choice" type="button" data-gift="line">
+              <span class="gift-icon gift-icon-lines" aria-hidden="true"></span>
+              <strong>+1 Bullet Line</strong>
+              <small>Add another shot path.</small>
+            </button>
+            <button class="gift-choice" type="button" data-gift="frequency">
+              <span class="gift-icon gift-icon-speed" aria-hidden="true"></span>
+              <strong>Faster Shooting</strong>
+              <small>Reduce the firing delay.</small>
+            </button>
+            <button class="gift-choice" type="button" data-gift="sakura">
+              <span class="gift-icon gift-icon-sakura" aria-hidden="true"></span>
+              <strong>Sakura Effects</strong>
+              <small>Add petal trails and bursts.</small>
+            </button>
+          </div>
         </div>
       </section>
     </main>
