@@ -115,11 +115,15 @@ const state = {
   particles: [],
   dandruff: [],
   dandruffRemoved: 0,
+  dandruffBottleCount: 0,
   dandruffRespawnTimer: 0,
   dandruffThanksTimer: 0,
+  dandruffEatTimer: 0,
   dandruffEmoteTimer: 0,
   dandruffMessage: "Click the pixels in Saki's hair",
+  bottlePulse: 0,
   sprite: null,
+  cleanSprite: null,
 };
 
 const random = (min, max) => min + Math.random() * (max - min);
@@ -231,6 +235,89 @@ function buildSpriteFromImage(image) {
   return low;
 }
 
+function buildCleanSpriteFromImage(image) {
+  const portrait = document.createElement("canvas");
+  portrait.width = 92;
+  portrait.height = 128;
+  const px = portrait.getContext("2d");
+  px.imageSmoothingEnabled = false;
+  px.clearRect(0, 0, portrait.width, portrait.height);
+
+  px.fillStyle = "#0b0b0f";
+  px.fillRect(10, 8, 72, 78);
+  px.fillRect(4, 38, 18, 76);
+  px.fillRect(70, 34, 18, 82);
+
+  px.save();
+  px.beginPath();
+  px.ellipse(46, 44, 38, 42, 0, 0, Math.PI * 2);
+  px.rect(18, 56, 56, 64);
+  px.clip();
+  px.drawImage(image, 58, 18, 732, 1032, 0, 0, portrait.width, portrait.height);
+  px.restore();
+
+  px.fillStyle = "rgba(8, 8, 11, 0.86)";
+  px.fillRect(8, 24, 14, 58);
+  px.fillRect(70, 22, 14, 60);
+  px.fillRect(16, 9, 58, 14);
+  px.fillRect(12, 21, 66, 16);
+  px.fillRect(10, 34, 42, 12);
+  px.fillRect(14, 46, 27, 9);
+  px.fillRect(4, 76, 18, 42);
+  px.fillRect(70, 76, 18, 42);
+
+  px.fillStyle = "#fff1e8";
+  px.fillRect(25, 48, 42, 28);
+  px.fillRect(30, 75, 30, 12);
+  px.fillRect(34, 86, 22, 7);
+
+  px.fillStyle = "#0b0b0f";
+  px.fillRect(20, 45, 38, 9);
+  px.fillRect(18, 54, 22, 5);
+  px.fillRect(21, 60, 12, 4);
+  px.fillRect(60, 40, 12, 38);
+
+  px.fillStyle = "#d93662";
+  px.fillRect(57, 54, 7, 3);
+  px.fillRect(59, 57, 5, 2);
+  px.fillStyle = "#ffe3ec";
+  px.fillRect(62, 54, 2, 1);
+
+  px.fillStyle = "#d96f75";
+  px.fillRect(42, 77, 8, 2);
+  px.fillRect(45, 79, 4, 1);
+  px.fillStyle = "rgba(255, 224, 224, 0.72)";
+  px.fillRect(23, 66, 6, 3);
+  px.fillRect(61, 66, 6, 3);
+
+  px.fillStyle = "#ffffff";
+  px.fillRect(28, 92, 36, 14);
+  px.fillRect(32, 106, 28, 9);
+  px.fillStyle = "#a58cff";
+  px.fillRect(22, 109, 48, 15);
+  px.fillRect(34, 101, 24, 10);
+  px.fillStyle = "#4b378f";
+  px.fillRect(42, 110, 9, 14);
+  px.fillStyle = "#fbf8ff";
+  px.fillRect(44, 112, 5, 5);
+
+  px.fillStyle = "#8069ff";
+  px.fillRect(70, 14, 14, 14);
+  px.fillRect(76, 28, 12, 16);
+  px.fillRect(64, 28, 13, 13);
+  px.fillStyle = "#d9d1ff";
+  px.fillRect(76, 16, 5, 4);
+  px.fillRect(80, 31, 4, 4);
+
+  px.fillStyle = "rgba(255, 255, 255, 0.34)";
+  px.fillRect(31, 23, 8, 2);
+  px.fillRect(40, 18, 9, 2);
+  px.fillRect(50, 24, 5, 2);
+  px.fillRect(35, 95, 5, 3);
+
+  return portrait;
+}
+
 function buildFallbackSprite() {
   const low = document.createElement("canvas");
   low.width = 44;
@@ -257,6 +344,18 @@ function buildFallbackSprite() {
   px.fillRect(33, 9, 8, 14);
   px.fillRect(30, 14, 12, 7);
   return low;
+}
+
+function buildFallbackCleanSprite() {
+  const fallbackImage = buildFallbackSprite();
+  const portrait = document.createElement("canvas");
+  portrait.width = 92;
+  portrait.height = 128;
+  const px = portrait.getContext("2d");
+  px.imageSmoothingEnabled = false;
+  px.clearRect(0, 0, portrait.width, portrait.height);
+  px.drawImage(fallbackImage, 0, 0, fallbackImage.width, fallbackImage.height, 10, 0, 72, 112);
+  return portrait;
 }
 
 function renderIntroDialogue() {
@@ -436,10 +535,13 @@ function resetDandruffGame() {
   state.particles.length = 0;
   state.dandruff.length = 0;
   state.dandruffRemoved = 0;
+  state.dandruffBottleCount = 0;
   state.dandruffRespawnTimer = 0.8;
   state.dandruffThanksTimer = 0;
+  state.dandruffEatTimer = 0;
   state.dandruffEmoteTimer = 0;
   state.dandruffMessage = "Click the pixels in Saki's hair";
+  state.bottlePulse = 0;
   state.player.x = state.width * 0.5;
   state.player.y = state.height * 0.58;
   state.pointer.active = false;
@@ -480,8 +582,8 @@ function updateHud() {
     comboEl.textContent = state.combo.toString();
     goldEl.textContent = state.gold.toString();
     levelEl.textContent = state.level.toString();
-    xpTextEl.textContent = `${state.dandruff.length} spots`;
-    xpFillEl.style.width = `${Math.round(clamp(state.dandruff.length / 22, 0, 1) * 100)}%`;
+    xpTextEl.textContent = `${state.dandruffBottleCount} / 65 bottle`;
+    xpFillEl.style.width = `${Math.round(clamp(state.dandruffBottleCount / 65, 0, 1) * 100)}%`;
     return;
   }
 
@@ -769,28 +871,46 @@ function spawnCoinText(x, y, amount) {
 }
 
 function dandruffLayout() {
-  const sprite = state.sprite || buildFallbackSprite();
-  const scale = clamp(Math.min(state.width / 250, state.height / 300), 3.2, 5.2);
+  const sprite = state.cleanSprite || state.sprite || buildFallbackCleanSprite();
+  const scale = clamp(Math.min(state.width / 360, state.height / 205), 2.75, 3.75);
   const width = sprite.width * scale;
   const height = sprite.height * scale;
+  const x = state.width * 0.5;
+  const y = state.height * 0.56;
   return {
     sprite,
     scale,
     width,
     height,
-    x: state.width * 0.5,
-    y: state.height * 0.62,
-    left: state.width * 0.5 - width * 0.5,
-    top: state.height * 0.62 - height * 0.62,
+    x,
+    y,
+    left: x - width * 0.5,
+    top: y - height * 0.5,
+  };
+}
+
+function bottleLayout() {
+  const width = 78;
+  const height = 178;
+  const x = clamp(state.width - 118, 760, state.width - 92);
+  const y = state.height * 0.54;
+
+  return {
+    x,
+    y,
+    width,
+    height,
+    left: x - width * 0.5,
+    top: y - height * 0.5,
   };
 }
 
 function spawnDandruff(initial = false) {
   if (state.dandruff.length >= 24) return;
   state.dandruff.push({
-    rx: random(0.18, 0.74),
-    ry: random(0.06, 0.36),
-    size: random(3, 5),
+    rx: random(0.16, 0.76),
+    ry: random(0.06, 0.42),
+    size: random(3, 4.6),
     phase: random(0, Math.PI * 2),
     fresh: initial ? 0 : 0.4,
   });
@@ -800,7 +920,9 @@ function updateDandruffWorld(dt) {
   state.elapsed += dt;
   state.dandruffRespawnTimer -= dt;
   state.dandruffThanksTimer = Math.max(0, state.dandruffThanksTimer - dt);
+  state.dandruffEatTimer = Math.max(0, state.dandruffEatTimer - dt);
   state.dandruffEmoteTimer = Math.max(0, state.dandruffEmoteTimer - dt);
+  state.bottlePulse = Math.max(0, state.bottlePulse - dt);
 
   for (const spot of state.dandruff) {
     spot.fresh = Math.max(0, spot.fresh - dt);
@@ -811,10 +933,13 @@ function updateDandruffWorld(dt) {
     state.dandruffRespawnTimer = random(1.0, 1.8);
   }
 
+  updateParticles(dt);
   updateHud();
 }
 
 function handleDandruffClick(point) {
+  if (handleBottleClick(point)) return;
+
   const layout = dandruffLayout();
   for (let i = state.dandruff.length - 1; i >= 0; i -= 1) {
     const spot = state.dandruff[i];
@@ -828,16 +953,18 @@ function handleDandruffClick(point) {
       state.score = state.dandruffRemoved;
       state.gold += 1;
       state.combo += 1;
-      spawnBurst(x, y, "#ffffff", 9);
-      spawnBurst(x, y, "#ffd166", 3);
-      spawnCoinText(x, y, 1);
+      state.dandruffBottleCount += 1;
+      state.bottlePulse = 0.34;
+      spawnBurst(x, y, "#ffffff", 3);
+      spawnBurst(x, y, "#c9fff2", 1);
+      spawnBottleCollect(x, y);
 
       if (state.dandruffRemoved % 5 === 0) {
         state.dandruffThanksTimer = 2.6;
         state.dandruffEmoteTimer = 1.6;
         state.dandruffMessage = "thank you!";
         state.level += 1;
-        spawnPixelEmotes(x, y - 26);
+        spawnPixelEmotes(layout.x + layout.width * 0.18, layout.top + layout.height * 0.12);
       }
 
       updateHud();
@@ -849,17 +976,64 @@ function handleDandruffClick(point) {
   updateHud();
 }
 
+function handleBottleClick(point) {
+  const bottle = bottleLayout();
+  const inside =
+    point.x >= bottle.left &&
+    point.x <= bottle.left + bottle.width &&
+    point.y >= bottle.top &&
+    point.y <= bottle.top + bottle.height + 44;
+
+  if (!inside) return false;
+  if (state.dandruffBottleCount < 65) return true;
+
+  state.dandruffBottleCount -= 65;
+  state.score += 65;
+  state.gold += 65;
+  state.combo += 5;
+  state.dandruffEatTimer = 2.2;
+  state.dandruffThanksTimer = 2.4;
+  state.dandruffMessage = "you ate 65 flakes?!";
+  state.bottlePulse = 0.9;
+  spawnPixelEmotes(bottle.x - 64, bottle.top + 18);
+  spawnBurst(bottle.x, bottle.y - 12, "#ffd166", 14);
+  spawnBurst(bottle.x, bottle.y - 12, "#fff7fb", 8);
+  updateHud();
+  return true;
+}
+
+function spawnBottleCollect(x, y) {
+  const bottle = bottleLayout();
+  const count = Math.min(4, Math.max(0, maxParticles - state.particles.length));
+
+  for (let i = 0; i < count; i += 1) {
+    state.particles.push({
+      x: x + random(-6, 6),
+      y: y + random(-6, 6),
+      vx: random(-18, 18),
+      vy: random(-24, 10),
+      targetX: bottle.x + random(-18, 18),
+      targetY: bottle.top + bottle.height * 0.62 + random(-16, 14),
+      size: random(3, 5),
+      life: 0.72,
+      maxLife: 0.72,
+      color: "#fff7fb",
+      collect: true,
+    });
+  }
+}
+
 function spawnPixelEmotes(x, y) {
   const emoteColors = ["#ff63a8", "#ffd166", "#5df0c4"];
-  for (let i = 0; i < 8; i += 1) {
+  for (let i = 0; i < 4; i += 1) {
     state.particles.push({
-      x: x + random(-36, 36),
-      y: y + random(-12, 14),
-      vx: random(-28, 28),
-      vy: random(-92, -42),
-      size: random(5, 8),
-      life: random(0.72, 1.1),
-      maxLife: 1.1,
+      x: x + random(42, 96),
+      y: y + random(6, 42),
+      vx: random(-12, 18),
+      vy: random(-56, -28),
+      size: random(4, 6),
+      life: random(0.6, 0.9),
+      maxLife: 0.9,
       color: emoteColors[i % emoteColors.length],
       emote: i % 2 === 0 ? "heart" : "smile",
     });
@@ -976,11 +1150,21 @@ function updateWorld(dt) {
 
   state.enemies = state.enemies.filter((enemy) => !enemy.dead);
 
+  updateParticles(dt);
+}
+
+function updateParticles(dt) {
   for (const particle of state.particles) {
-    particle.x += particle.vx * dt;
-    particle.y += particle.vy * dt;
-    particle.vx *= 0.96;
-    particle.vy *= 0.96;
+    if (particle.collect) {
+      const ease = 1 - Math.pow(0.01, dt);
+      particle.x += (particle.targetX - particle.x) * ease;
+      particle.y += (particle.targetY - particle.y) * ease;
+    } else {
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+      particle.vx *= 0.96;
+      particle.vy *= 0.96;
+    }
     particle.life -= dt;
   }
   state.particles = state.particles.filter((particle) => particle.life > 0);
@@ -1446,14 +1630,14 @@ function drawDandruffGame() {
   ctx.imageSmoothingEnabled = false;
 
   ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-  ctx.fillRect(layout.x - layout.width * 0.56, layout.y + layout.height * 0.32, layout.width * 1.12, 10);
+  ctx.fillRect(layout.x - layout.width * 0.48, layout.y + layout.height * 0.49, layout.width * 0.96, 10);
 
   ctx.drawImage(layout.sprite, layout.left, layout.top, layout.width, layout.height);
 
   for (const spot of state.dandruff) {
     const x = layout.left + spot.rx * layout.width;
     const y = layout.top + spot.ry * layout.height + Math.sin(state.time * 3 + spot.phase) * 1.5;
-    const unit = Math.max(3, spot.size * layout.scale * 0.18);
+    const unit = Math.max(2.5, spot.size * layout.scale * 0.14);
     const alpha = spot.fresh > 0 ? 0.45 + Math.sin(state.time * 18) * 0.2 : 1;
 
     ctx.globalAlpha = alpha;
@@ -1467,10 +1651,74 @@ function drawDandruffGame() {
     ctx.globalAlpha = 1;
   }
 
+  drawDandruffBottle();
   drawDandruffSpeech(layout);
   drawDandruffHint(layout);
   ctx.restore();
   ctx.imageSmoothingEnabled = true;
+}
+
+function drawDandruffBottle() {
+  const bottle = bottleLayout();
+  const fillRatio = clamp(state.dandruffBottleCount / 65, 0, 1);
+  const pulse = 1 + state.bottlePulse * 0.08;
+  const left = bottle.left;
+  const top = bottle.top;
+  const width = bottle.width * pulse;
+  const height = bottle.height * pulse;
+  const x = bottle.x - width * 0.5;
+  const y = bottle.y - height * 0.5;
+  const liquidHeight = (height - 46) * fillRatio;
+
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.fillStyle = "#151218";
+  ctx.fillRect(14, 0, width - 28, 14);
+  ctx.fillRect(8, 12, width - 16, height - 12);
+
+  ctx.fillStyle = "rgba(201, 255, 242, 0.12)";
+  ctx.fillRect(16, 22, width - 32, height - 34);
+  ctx.fillStyle = "rgba(255, 247, 251, 0.2)";
+  ctx.fillRect(22, 28, 7, height - 50);
+
+  ctx.fillStyle = "#6e5c88";
+  ctx.fillRect(14, 0, width - 28, 4);
+  ctx.fillRect(10, 14, 4, height - 20);
+  ctx.fillRect(width - 14, 14, 4, height - 20);
+  ctx.fillRect(14, height - 10, width - 28, 4);
+
+  ctx.fillStyle = "#fff7fb";
+  ctx.fillRect(22, height - 18 - liquidHeight, width - 44, liquidHeight);
+  ctx.fillStyle = "#c9fff2";
+  for (let i = 0; i < Math.min(state.dandruffBottleCount, 34); i += 1) {
+    const px = 24 + ((i * 13) % Math.max(1, width - 50));
+    const py = height - 22 - ((i * 9) % Math.max(1, liquidHeight || 1));
+    ctx.fillRect(px, py, 4, 4);
+  }
+
+  ctx.fillStyle = "#151218";
+  ctx.font = "900 13px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillRect(8, height + 10, width - 16, 34);
+  ctx.fillStyle = state.dandruffBottleCount >= 65 ? "#ffd166" : "#f8f1ff";
+  ctx.fillText(`${state.dandruffBottleCount}/65`, width * 0.5, height + 25);
+
+  if (state.dandruffBottleCount >= 65) {
+    ctx.fillStyle = "#ff63a8";
+    ctx.fillRect(2, height + 50, width - 4, 28);
+    ctx.fillStyle = "#151218";
+    ctx.fillText("EAT?", width * 0.5, height + 65);
+  }
+
+  if (state.dandruffEatTimer > 0) {
+    ctx.fillStyle = "#ffd166";
+    ctx.fillRect(0, -32, width, 24);
+    ctx.fillStyle = "#151218";
+    ctx.fillText("gulp!", width * 0.5, -19);
+  }
+
+  ctx.restore();
 }
 
 function drawDandruffSpeech(layout) {
@@ -1479,8 +1727,8 @@ function drawDandruffSpeech(layout) {
   const alpha = clamp(state.dandruffThanksTimer / 0.45, 0, 1);
   const width = 190;
   const height = 74;
-  const left = clamp(layout.x + layout.width * 0.18, 24, state.width - width - 24);
-  const top = clamp(layout.top + layout.height * 0.12, playTop(), state.height - height - 24);
+  const left = clamp(layout.x + layout.width * 0.24, 24, state.width - width - 24);
+  const top = clamp(layout.top + layout.height * 0.16, playTop(), state.height - height - 24);
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -1506,17 +1754,21 @@ function drawDandruffHint(layout) {
   ctx.save();
   ctx.globalAlpha = 0.9;
   ctx.fillStyle = "#151218";
-  ctx.fillRect(24, state.height - 74, 330, 46);
+  ctx.fillRect(24, state.height - 74, 430, 46);
   ctx.fillStyle = "#5df0c4";
-  ctx.fillRect(28, state.height - 70, 322, 4);
-  ctx.fillRect(28, state.height - 32, 322, 4);
+  ctx.fillRect(28, state.height - 70, 422, 4);
+  ctx.fillRect(28, state.height - 32, 422, 4);
   ctx.fillRect(28, state.height - 70, 4, 42);
-  ctx.fillRect(346, state.height - 70, 4, 42);
+  ctx.fillRect(446, state.height - 70, 4, 42);
   ctx.fillStyle = "#f8f1ff";
   ctx.font = "900 14px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(`Cleaned: ${state.dandruffRemoved}   Spots: ${state.dandruff.length}`, 44, state.height - 50);
+  ctx.fillText(
+    `Cleaned: ${state.dandruffRemoved}   Bottle: ${state.dandruffBottleCount}/65`,
+    44,
+    state.height - 50,
+  );
   ctx.restore();
 }
 
@@ -1715,15 +1967,18 @@ bgMusic.addEventListener("ended", () => {
 
 asset.addEventListener("load", () => {
   state.sprite = buildSpriteFromImage(asset);
+  state.cleanSprite = buildCleanSpriteFromImage(asset);
   renderIntroSaki();
 });
 
 asset.addEventListener("error", () => {
   state.sprite = buildFallbackSprite();
+  state.cleanSprite = buildFallbackCleanSprite();
 });
 
 resize();
 state.sprite = buildFallbackSprite();
+state.cleanSprite = buildFallbackCleanSprite();
 renderIntroSaki();
 musicBtn.setAttribute("aria-pressed", "true");
 updateGameModeButtons();
