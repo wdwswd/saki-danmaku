@@ -460,11 +460,45 @@ function getDressedSprite(baseSprite, clean = false) {
   const unit = clean ? 2 : 1;
   const offsetX = clean ? 2 : 0;
   const offsetY = clean ? 2 : 0;
+  rebuildCharacterForOutfit(px, state.equippedOutfit, clean);
   drawOutfitPixels(px, state.equippedOutfit, unit, offsetX, offsetY);
+  if (clean) drawCleanOutfitDetails(px, state.equippedOutfit);
   if (state.equippedOutfit !== "mech") redrawSakiFeatures(px, clean);
 
   cache.set(key, dressed);
   return dressed;
+}
+
+function rebuildCharacterForOutfit(context, outfitId, clean = false) {
+  const unit = clean ? 2 : 1;
+  const offsetX = clean ? 2 : 0;
+  const offsetY = clean ? 2 : 0;
+  const px = (x, y, w, h, color) => {
+    context.fillStyle = color;
+    context.fillRect(offsetX + x * unit, offsetY + y * unit, w * unit, h * unit);
+  };
+
+  if (outfitId === "mech") {
+    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    px(8, 4, 28, 56, "#151a22");
+    px(5, 12, 35, 42, "#2c3440");
+    px(10, 7, 25, 20, "#5f6f80");
+    return;
+  }
+
+  px(8, 36, 29, 24, "rgba(0, 0, 0, 0)");
+  context.clearRect(offsetX + 7 * unit, offsetY + 36 * unit, 31 * unit, 25 * unit);
+  context.clearRect(offsetX + 5 * unit, offsetY + 3 * unit, 36 * unit, 10 * unit);
+  context.clearRect(offsetX + 4 * unit, offsetY + 13 * unit, 8 * unit, 18 * unit);
+  context.clearRect(offsetX + 33 * unit, offsetY + 12 * unit, 9 * unit, 20 * unit);
+
+  px(7, 9, 8, 43, "#0b0b0f");
+  px(29, 10, 8, 43, "#0b0b0f");
+  px(13, 4, 20, 9, "#0b0b0f");
+  px(10, 46, 24, 8, "#151218");
+  px(14, 23, 19, 13, "#fff1e8");
+  px(17, 35, 12, 5, "#fff1e8");
+  px(14, 39, 16, 7, "#ffffff");
 }
 
 function drawOutfitPixels(context, outfitId, unit = 1, offsetX = 0, offsetY = 0) {
@@ -530,7 +564,7 @@ function drawOutfitPixels(context, outfitId, unit = 1, offsetX = 0, offsetY = 0)
     px(27, 3, 4, 7, "#ffd166");
     px(17, 8, 15, 3, "#ffffff");
     px(35, 6, 4, 4, "#ffd166");
-    px(39, 3, 3, "#ffffff");
+    px(39, 3, 3, 3, "#ffffff");
     px(6, 27, 4, 4, "#ffd166");
     px(4, 31, 3, 3, "#ffffff");
     px(34, 26, 5, 5, "#ff63a8");
@@ -575,6 +609,49 @@ function drawOutfitPixels(context, outfitId, unit = 1, offsetX = 0, offsetY = 0)
     px(35, 20, 5, 8, "#ffd166");
     px(5, 24, 3, 3, "#f7e8ff");
     px(38, 24, 3, 3, "#f7e8ff");
+  }
+}
+
+function drawCleanOutfitDetails(context, outfitId) {
+  const line = (x, y, w, h, color) => {
+    context.fillStyle = color;
+    context.fillRect(x, y, w, h);
+  };
+
+  if (outfitId === "default") return;
+  if (outfitId === "mech") {
+    line(22, 20, 46, 2, "#b9d3e8");
+    line(28, 36, 36, 3, "#5df0c4");
+    line(21, 78, 50, 2, "#5df0c4");
+    line(18, 96, 12, 3, "#5df0c4");
+    line(62, 96, 12, 3, "#5df0c4");
+    return;
+  }
+
+  const accent =
+    outfitId === "maid"
+      ? "#d9d1ff"
+      : outfitId === "sailor"
+        ? "#6bd3ff"
+        : outfitId === "magical"
+          ? "#ffd166"
+          : "#ffd166";
+  line(22, 82, 48, 2, accent);
+  line(28, 98, 36, 2, accent);
+  line(24, 104, 6, 2, "#fff7fb");
+  line(62, 104, 6, 2, "#fff7fb");
+  if (outfitId === "maid") {
+    line(30, 88, 32, 1, "#151218");
+    line(35, 91, 22, 1, "#151218");
+  } else if (outfitId === "sailor") {
+    line(35, 88, 22, 3, "#e64068");
+    line(24, 78, 44, 1, "#3157a8");
+  } else if (outfitId === "magical") {
+    line(31, 86, 30, 3, "#ff63a8");
+    line(42, 80, 8, 18, "#8069ff");
+  } else if (outfitId === "medieval") {
+    line(30, 86, 32, 3, "#7d4aa8");
+    line(44, 78, 8, 34, "#ffd166");
   }
 }
 
@@ -1152,7 +1229,7 @@ function togglePause() {
 function updateHud() {
   if (state.gameType === "dandruff") {
     scoreEl.textContent = state.dandruffRemoved.toString();
-    shieldEl.textContent = "OK";
+    shieldEl.textContent = "0";
     goldEl.textContent = state.gold.toString();
     xpTextEl.textContent = `${state.dandruffBottleCount} / 65 bottle`;
     xpFillEl.style.width = `${Math.round(clamp(state.dandruffBottleCount / 65, 0, 1) * 100)}%`;
@@ -1267,7 +1344,7 @@ function fireBullet(force = false) {
       trail: palette.trail,
       tier,
       power,
-      shape: tier % 5,
+      shape: tier % 8,
       spin: random(0, Math.PI * 2),
     });
   }
@@ -1925,13 +2002,30 @@ function drawBullets() {
       ctx.fillRect(-4, -coreHeight - 2, coreLength, coreHeight - 1);
       ctx.fillRect(-4, 3, coreLength, coreHeight - 1);
       ctx.fillRect(4, -3, coreLength + 4, 6);
-    } else {
+    } else if (shape === 4) {
       const size = 11 + power * 2;
       ctx.fillRect(-2, -size * 0.5, size, 3);
       ctx.fillRect(-2, size * 0.5 - 3, size, 3);
       ctx.fillRect(-2, -size * 0.5, 3, size);
       ctx.fillRect(size - 5, -size * 0.5, 3, size);
       ctx.fillRect(4, -2, coreLength, 4);
+    } else if (shape === 5) {
+      ctx.fillRect(-6, -2, coreLength + 8, 4);
+      ctx.fillRect(0, -coreHeight - 3, 4, coreHeight);
+      ctx.fillRect(8, 3, 4, coreHeight);
+      ctx.fillRect(coreLength + 2, -coreHeight * 0.5, 6, coreHeight);
+    } else if (shape === 6) {
+      ctx.fillRect(-6, -3, coreLength, 6);
+      ctx.fillRect(coreLength - 1, -7, 5 + power, 14);
+      ctx.fillRect(coreLength + 4 + power, -3, 4, 6);
+      ctx.fillRect(-10, -8, 5, 4);
+      ctx.fillRect(-10, 4, 5, 4);
+    } else {
+      const dot = 5 + Math.min(5, power);
+      ctx.fillRect(-4, -dot * 0.5, dot, dot);
+      ctx.fillRect(6, -dot * 0.5 - 6, dot, dot);
+      ctx.fillRect(6, -dot * 0.5 + 6, dot, dot);
+      ctx.fillRect(16, -dot * 0.5, dot + power, dot);
     }
 
     ctx.fillStyle = bullet.accent || "#ffffff";
