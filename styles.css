@@ -59,7 +59,7 @@ button {
   right: clamp(10px, 2.6vw, 24px);
   z-index: 3;
   display: grid;
-  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px 44px;
+  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px 44px 44px;
   gap: 8px;
   align-items: center;
   pointer-events: none;
@@ -149,6 +149,11 @@ button {
     transform 160ms ease,
     border-color 160ms ease,
     background 160ms ease;
+}
+
+.text-icon {
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .icon-button:hover,
@@ -279,7 +284,8 @@ button {
   text-align: center;
 }
 
-.shop-panel {
+.shop-panel,
+.crypto-panel {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -291,6 +297,10 @@ button {
     8px 8px 0 #08070b,
     inset 0 0 0 3px rgba(255, 255, 255, 0.04);
   transform: translate(-50%, -50%);
+}
+
+.crypto-panel {
+  width: min(640px, calc(100vw - 64px));
 }
 
 .shop-header {
@@ -381,6 +391,41 @@ button {
   border-color: var(--gold);
   background: #3b3142;
   color: var(--gold);
+}
+
+.crypto-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.crypto-field textarea,
+.crypto-field input {
+  width: 100%;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  background: #0c0a11;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  padding: 10px;
+  resize: vertical;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.04);
+}
+
+.crypto-field textarea:focus,
+.crypto-field input:focus {
+  border-color: var(--mint);
+  outline: none;
+}
+
+.crypto-action {
+  width: 100%;
+  margin-top: 14px;
 }
 
 .conversation-frame {

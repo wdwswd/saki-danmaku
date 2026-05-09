@@ -25,6 +25,14 @@ const shopPanel = document.querySelector("#shopPanel");
 const closeShopBtn = document.querySelector("#closeShopBtn");
 const shopItemsEl = document.querySelector("#shopItems");
 const shopMessageEl = document.querySelector("#shopMessage");
+const messageBtn = document.querySelector("#messageBtn");
+const messagePanel = document.querySelector("#messagePanel");
+const closeMessageBtn = document.querySelector("#closeMessageBtn");
+const plainMessageEl = document.querySelector("#plainMessage");
+const messagePassphraseEl = document.querySelector("#messagePassphrase");
+const encryptMessageBtn = document.querySelector("#encryptMessageBtn");
+const encryptedMessageEl = document.querySelector("#encryptedMessage");
+const cryptoStatusEl = document.querySelector("#cryptoStatus");
 const gameModeBtns = document.querySelectorAll("[data-game]");
 
 const asset = new Image();
@@ -155,6 +163,7 @@ const state = {
   ownedOutfits: new Set(["default"]),
   shopMessage: "Break danmaku to earn coins, then buy outfits here.",
   shopResumeOnClose: false,
+  messageResumeOnClose: false,
   sprite: null,
   cleanSprite: null,
 };
@@ -503,6 +512,101 @@ function closeShop() {
   state.shopResumeOnClose = false;
 }
 
+function openMessagePanel() {
+  state.messageResumeOnClose = false;
+  if (state.mode === "playing") {
+    state.messageResumeOnClose = true;
+    state.mode = "paused";
+    pauseBtn.textContent = "▶";
+    pauseMusic();
+  }
+  cryptoStatusEl.textContent = "Runs locally in this browser. Enter a message and passphrase.";
+  messagePanel.classList.remove("hidden");
+}
+
+function closeMessagePanel() {
+  messagePanel.classList.add("hidden");
+  if (state.messageResumeOnClose && state.mode === "paused") {
+    state.mode = "playing";
+    state.lastFrame = performance.now();
+    pauseBtn.textContent = "Ⅱ";
+    startMusic();
+  }
+  state.messageResumeOnClose = false;
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+async function deriveMessageKey(passphrase, salt) {
+  const baseKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(passphrase),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+
+  return globalThis.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations: 120000,
+      hash: "SHA-256",
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt"],
+  );
+}
+
+async function generateEncryptedMessage() {
+  const message = plainMessageEl.value.trim();
+  const passphrase = messagePassphraseEl.value;
+
+  if (!message || !passphrase) {
+    cryptoStatusEl.textContent = "Add both a message and a passphrase first.";
+    return;
+  }
+
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.subtle) {
+    cryptoStatusEl.textContent = "Web Crypto is not available in this browser.";
+    return;
+  }
+
+  encryptMessageBtn.disabled = true;
+  cryptoStatusEl.textContent = "Encrypting locally...";
+
+  try {
+    const salt = cryptoApi.getRandomValues(new Uint8Array(16));
+    const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+    const key = await deriveMessageKey(passphrase, salt);
+    const encrypted = await cryptoApi.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(message));
+    const payload = {
+      type: "saki-group-message",
+      version: 1,
+      algorithm: "AES-GCM",
+      kdf: "PBKDF2-SHA256",
+      iterations: 120000,
+      salt: bytesToBase64(salt),
+      iv: bytesToBase64(iv),
+      ciphertext: bytesToBase64(new Uint8Array(encrypted)),
+    };
+
+    encryptedMessageEl.value = btoa(JSON.stringify(payload));
+    cryptoStatusEl.textContent = "Encrypted message generated locally.";
+  } catch (error) {
+    cryptoStatusEl.textContent = "Could not encrypt this message.";
+  } finally {
+    encryptMessageBtn.disabled = false;
+  }
+}
+
 function renderShop() {
   shopMessageEl.textContent = state.shopMessage;
   shopItemsEl.innerHTML = "";
@@ -558,6 +662,7 @@ function setGameType(gameType) {
 
   state.gameType = gameType;
   closeShop();
+  closeMessagePanel();
   updateGameModeButtons();
   state.pointer.active = false;
   state.bullets.length = 0;
@@ -1366,38 +1471,56 @@ function drawOutfitOverlay(playerWidth, playerHeight, scale) {
   };
 
   if (state.equippedOutfit === "maid") {
-    px(12, 47, 21, 12, "#111015");
-    px(16, 40, 13, 18, "#fff7fb");
+    px(10, 46, 25, 14, "#08070b");
+    px(15, 39, 15, 19, "#fff7fb");
+    px(12, 47, 4, 9, "#ffffff");
+    px(29, 47, 4, 9, "#ffffff");
     px(18, 42, 9, 4, "#ffffff");
-    px(14, 51, 4, 6, "#ffffff");
-    px(27, 51, 4, 6, "#ffffff");
-    px(18, 55, 9, 4, "#d9d1ff");
-    px(12, 9, 5, 2, "#ffffff");
-    px(27, 9, 5, 2, "#ffffff");
-    px(19, 8, 6, 2, "#ffffff");
-    px(21, 50, 3, 6, "#151218");
+    px(17, 54, 11, 5, "#d9d1ff");
+    px(20, 49, 5, 8, "#151218");
+    px(9, 8, 7, 3, "#ffffff");
+    px(28, 8, 7, 3, "#ffffff");
+    px(16, 6, 12, 3, "#ffffff");
+    px(11, 5, 3, 3, "#fff7fb");
+    px(30, 5, 3, 3, "#fff7fb");
+    px(6, 14, 5, 5, "#ffffff");
+    px(34, 14, 5, 5, "#ffffff");
+    px(7, 13, 3, 3, "#ff63a8");
+    px(35, 13, 3, 3, "#ff63a8");
   } else if (state.equippedOutfit === "sailor") {
-    px(12, 48, 21, 11, "#3157a8");
-    px(14, 39, 17, 9, "#fff7fb");
-    px(12, 42, 8, 6, "#3157a8");
-    px(25, 42, 8, 6, "#3157a8");
-    px(20, 43, 5, 8, "#e64068");
-    px(18, 55, 3, 4, "#fff7fb");
-    px(23, 55, 3, 4, "#fff7fb");
-    px(28, 55, 3, 4, "#fff7fb");
-    px(15, 50, 16, 2, "#6bd3ff");
+    px(11, 47, 23, 13, "#3157a8");
+    px(13, 39, 19, 10, "#fff7fb");
+    px(10, 41, 10, 8, "#3157a8");
+    px(25, 41, 10, 8, "#3157a8");
+    px(19, 42, 7, 10, "#e64068");
+    px(17, 55, 3, 4, "#fff7fb");
+    px(22, 55, 3, 4, "#fff7fb");
+    px(27, 55, 3, 4, "#fff7fb");
+    px(14, 50, 18, 2, "#6bd3ff");
+    px(24, 5, 11, 4, "#3157a8");
+    px(29, 9, 9, 3, "#3157a8");
+    px(26, 6, 7, 2, "#fff7fb");
+    px(6, 18, 7, 6, "#e64068");
+    px(9, 15, 5, 4, "#ff8aa0");
+    px(35, 18, 4, 7, "#6bd3ff");
   } else if (state.equippedOutfit === "magical") {
-    px(9, 45, 5, 14, "#8069ff");
-    px(31, 45, 5, 14, "#8069ff");
-    px(12, 47, 21, 12, "#ff63a8");
-    px(16, 40, 13, 18, "#ffffff");
-    px(18, 48, 9, 11, "#ffd166");
-    px(20, 42, 5, 7, "#8069ff");
-    px(14, 53, 4, 4, "#fff7fb");
-    px(27, 53, 4, 4, "#fff7fb");
-    px(35, 6, 3, 3, "#ffd166");
-    px(38, 3, 2, 2, "#ffffff");
-    px(8, 28, 3, 3, "#ffd166");
+    px(8, 44, 7, 16, "#8069ff");
+    px(30, 44, 7, 16, "#8069ff");
+    px(11, 46, 23, 14, "#ff63a8");
+    px(15, 39, 15, 20, "#ffffff");
+    px(17, 47, 11, 12, "#ffd166");
+    px(19, 41, 7, 8, "#8069ff");
+    px(13, 53, 5, 5, "#fff7fb");
+    px(27, 53, 5, 5, "#fff7fb");
+    px(18, 4, 3, 5, "#ffd166");
+    px(22, 2, 4, 6, "#ffd166");
+    px(27, 4, 3, 5, "#ffd166");
+    px(19, 8, 11, 2, "#ffffff");
+    px(35, 6, 4, 4, "#ffd166");
+    px(39, 3, 3, 3, "#ffffff");
+    px(6, 27, 4, 4, "#ffd166");
+    px(4, 31, 3, 3, "#ffffff");
+    px(34, 26, 5, 5, "#ff63a8");
   }
 }
 
@@ -2120,6 +2243,14 @@ shopItemsEl.addEventListener("click", (event) => {
   const button = event.target.closest("[data-outfit]");
   if (!button) return;
   buyOrEquipOutfit(button.dataset.outfit);
+});
+messageBtn.addEventListener("click", openMessagePanel);
+closeMessageBtn.addEventListener("click", closeMessagePanel);
+messagePanel.addEventListener("click", (event) => {
+  if (event.target === messagePanel) closeMessagePanel();
+});
+encryptMessageBtn.addEventListener("click", () => {
+  generateEncryptedMessage();
 });
 for (const button of gameModeBtns) {
   button.addEventListener("click", () => setGameType(button.dataset.game));

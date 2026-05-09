@@ -36,6 +36,7 @@
           <strong id="level">1</strong>
         </div>
         <button id="shopBtn" class="icon-button" type="button" aria-label="Open outfit shop">$</button>
+        <button id="messageBtn" class="icon-button text-icon" type="button" aria-label="Open local encrypted message tool">MSG</button>
         <button id="musicBtn" class="icon-button" type="button" aria-label="Toggle background music">♪</button>
         <button id="pauseBtn" class="icon-button" type="button" aria-label="暂停或继续">Ⅱ</button>
         <div class="xp-panel" aria-label="金币经验条">
@@ -93,6 +94,32 @@
           </div>
           <p id="shopMessage" class="shop-message">Break danmaku to earn coins, then buy outfits here.</p>
           <div id="shopItems" class="shop-grid" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="messagePanel" class="modal hidden" role="dialog" aria-modal="true" aria-label="Local encrypted message generator">
+        <div class="crypto-panel">
+          <div class="shop-header">
+            <div>
+              <p class="eyebrow">LOCAL TOOL</p>
+              <h2>Group Secret Message</h2>
+            </div>
+            <button id="closeMessageBtn" class="icon-button" type="button" aria-label="Close encrypted message tool">×</button>
+          </div>
+          <p id="cryptoStatus" class="shop-message">Runs locally in this browser. Enter a message and passphrase.</p>
+          <label class="crypto-field">
+            <span>Message</span>
+            <textarea id="plainMessage" rows="4" placeholder="Write your group message here"></textarea>
+          </label>
+          <label class="crypto-field">
+            <span>Passphrase</span>
+            <input id="messagePassphrase" type="password" autocomplete="off" placeholder="Shared passphrase" />
+          </label>
+          <button id="encryptMessageBtn" class="primary-button crypto-action" type="button">Generate Encrypted Message</button>
+          <label class="crypto-field">
+            <span>Encrypted output</span>
+            <textarea id="encryptedMessage" rows="5" readonly placeholder="Encrypted message will appear here"></textarea>
+          </label>
         </div>
       </section>
     </main>
