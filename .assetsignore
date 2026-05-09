@@ -1,0 +1,10 @@
+.git
+.git/**
+.wrangler
+.wrangler/**
+cloudflare/leaderboard-worker/.wrangler
+cloudflare/leaderboard-worker/.wrangler/**
+Saki-Danmaku-Playable-bottle-v2
+Saki-Danmaku-Playable-bottle-v2/**
+preview-clean-saki.svg
+*.zip
