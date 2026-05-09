@@ -525,7 +525,10 @@ function toggleMusic() {
 }
 
 function openShop() {
-  state.shopMessage = state.gameType === "danmaku" ? "Spend coins from broken danmaku." : "Outfits are mainly for the shooting game.";
+  state.shopMessage =
+    state.gameType === "danmaku"
+      ? "Spend shared coins from broken danmaku."
+      : "Clean flakes for shared coins. Outfits update Saki in both games.";
   state.shopResumeOnClose = false;
   if (state.mode === "playing") {
     state.shopResumeOnClose = true;
@@ -893,7 +896,6 @@ function resetDanmakuGame() {
   state.score = 0;
   state.shield = 5;
   state.combo = 0;
-  state.gold = 0;
   state.level = 1;
   state.levelGold = 0;
   state.levelPulse = 0;
@@ -927,7 +929,6 @@ function resetDandruffGame() {
   state.score = 0;
   state.shield = 0;
   state.combo = 0;
-  state.gold = 0;
   state.level = 1;
   state.levelGold = 0;
   state.levelPulse = 0;
@@ -1198,7 +1199,7 @@ function triggerBulletUpgrade(tier) {
 
 function triggerScoreSurprise(milestone) {
   state.cheerMilestone = milestone;
-  state.cheerTimer = 8.8;
+  state.cheerTimer = 3.2;
   state.shake = Math.max(state.shake, 8);
   spawnBurst(state.player.x, state.player.y - 38, "#ffd166", 28);
   spawnShockwave(state.width * 0.5, state.height * 0.52, "#ffd166", 1);
@@ -1354,14 +1355,16 @@ function handleDandruffClick(point) {
 
     if (dist2(point.x, point.y, x, y) <= radius * radius) {
       state.dandruff.splice(i, 1);
+      const cleanReward = 5;
       state.dandruffRemoved += 1;
       state.score = state.dandruffRemoved;
-      state.gold += 1;
+      state.gold += cleanReward;
       state.combo += 1;
       state.dandruffBottleCount += 1;
       state.bottlePulse = 0.34;
       spawnBurst(x, y, "#ffffff", 3);
       spawnBurst(x, y, "#c9fff2", 1);
+      spawnCoinText(x, y, cleanReward);
       spawnBottleCollect(x, y);
 
       if (state.dandruffRemoved % 5 === 0) {
@@ -1652,27 +1655,31 @@ function drawPlayer() {
   ctx.imageSmoothingEnabled = true;
 }
 
-function drawOutfitOverlay(playerWidth, playerHeight, scale) {
+function drawOutfitOverlay(playerWidth, playerHeight, scale, anchorY = 0.62) {
   if (state.equippedOutfit === "default") return;
 
   const ox = -playerWidth * 0.5;
-  const oy = -playerHeight * 0.62;
+  const oy = -playerHeight * anchorY;
   const px = (x, y, w, h, color) => {
     ctx.fillStyle = color;
     ctx.fillRect(ox + x * scale, oy + y * scale, w * scale, h * scale);
   };
 
   if (state.equippedOutfit === "maid") {
+    px(8, 36, 29, 24, "#08070b");
+    px(11, 37, 23, 20, "#fff7fb");
     px(10, 46, 25, 14, "#08070b");
     px(15, 39, 15, 19, "#fff7fb");
+    px(8, 39, 7, 18, "#dcd8e8");
+    px(30, 39, 7, 18, "#dcd8e8");
     px(12, 47, 4, 9, "#ffffff");
     px(29, 47, 4, 9, "#ffffff");
     px(18, 42, 9, 4, "#ffffff");
     px(17, 54, 11, 5, "#d9d1ff");
     px(20, 49, 5, 8, "#151218");
-    px(9, 8, 7, 3, "#ffffff");
-    px(28, 8, 7, 3, "#ffffff");
-    px(16, 6, 12, 3, "#ffffff");
+    px(7, 7, 8, 5, "#ffffff");
+    px(28, 7, 9, 5, "#ffffff");
+    px(14, 5, 16, 4, "#ffffff");
     px(11, 5, 3, 3, "#fff7fb");
     px(30, 5, 3, 3, "#fff7fb");
     px(6, 14, 5, 5, "#ffffff");
@@ -1680,40 +1687,49 @@ function drawOutfitOverlay(playerWidth, playerHeight, scale) {
     px(7, 13, 3, 3, "#ff63a8");
     px(35, 13, 3, 3, "#ff63a8");
   } else if (state.equippedOutfit === "sailor") {
+    px(8, 38, 29, 22, "#3157a8");
+    px(11, 38, 23, 16, "#fff7fb");
     px(11, 47, 23, 13, "#3157a8");
     px(13, 39, 19, 10, "#fff7fb");
     px(10, 41, 10, 8, "#3157a8");
     px(25, 41, 10, 8, "#3157a8");
     px(19, 42, 7, 10, "#e64068");
+    px(16, 50, 14, 5, "#e64068");
     px(17, 55, 3, 4, "#fff7fb");
     px(22, 55, 3, 4, "#fff7fb");
     px(27, 55, 3, 4, "#fff7fb");
     px(14, 50, 18, 2, "#6bd3ff");
-    px(24, 5, 11, 4, "#3157a8");
-    px(29, 9, 9, 3, "#3157a8");
-    px(26, 6, 7, 2, "#fff7fb");
+    px(22, 4, 14, 5, "#3157a8");
+    px(28, 8, 11, 4, "#3157a8");
+    px(25, 5, 9, 2, "#fff7fb");
     px(6, 18, 7, 6, "#e64068");
     px(9, 15, 5, 4, "#ff8aa0");
     px(35, 18, 4, 7, "#6bd3ff");
   } else if (state.equippedOutfit === "magical") {
+    px(6, 39, 33, 21, "#8069ff");
     px(8, 44, 7, 16, "#8069ff");
     px(30, 44, 7, 16, "#8069ff");
     px(11, 46, 23, 14, "#ff63a8");
     px(15, 39, 15, 20, "#ffffff");
     px(17, 47, 11, 12, "#ffd166");
     px(19, 41, 7, 8, "#8069ff");
+    px(13, 42, 19, 5, "#ffd166");
+    px(9, 54, 27, 4, "#ff63a8");
     px(13, 53, 5, 5, "#fff7fb");
     px(27, 53, 5, 5, "#fff7fb");
-    px(18, 4, 3, 5, "#ffd166");
-    px(22, 2, 4, 6, "#ffd166");
-    px(27, 4, 3, 5, "#ffd166");
-    px(19, 8, 11, 2, "#ffffff");
+    px(16, 3, 4, 7, "#ffd166");
+    px(21, 1, 5, 8, "#ffd166");
+    px(27, 3, 4, 7, "#ffd166");
+    px(17, 8, 15, 3, "#ffffff");
     px(35, 6, 4, 4, "#ffd166");
     px(39, 3, 3, 3, "#ffffff");
     px(6, 27, 4, 4, "#ffd166");
     px(4, 31, 3, 3, "#ffffff");
     px(34, 26, 5, 5, "#ff63a8");
   } else if (state.equippedOutfit === "mech") {
+    px(5, 5, 35, 55, "#2c3440");
+    px(8, 10, 29, 22, "#5f6f80");
+    px(11, 18, 23, 7, "#151218");
     px(8, 43, 29, 17, "#2c3440");
     px(11, 39, 23, 11, "#758596");
     px(14, 47, 17, 12, "#b9d3e8");
@@ -1731,16 +1747,19 @@ function drawOutfitOverlay(playerWidth, playerHeight, scale) {
     px(13, 57, 6, 4, "#5df0c4");
     px(26, 57, 6, 4, "#5df0c4");
   } else if (state.equippedOutfit === "medieval") {
+    px(6, 37, 33, 23, "#5b2d6f");
+    px(10, 38, 25, 16, "#f7e8ff");
     px(7, 44, 31, 16, "#5b2d6f");
     px(11, 39, 23, 12, "#f7e8ff");
     px(14, 46, 17, 14, "#7d4aa8");
     px(18, 41, 9, 18, "#ffd166");
     px(9, 47, 5, 10, "#d7b3ff");
     px(31, 47, 5, 10, "#d7b3ff");
+    px(8, 55, 29, 4, "#7d4aa8");
     px(12, 54, 21, 3, "#ffd166");
     px(16, 57, 4, 3, "#f7e8ff");
     px(25, 57, 4, 3, "#f7e8ff");
-    px(9, 8, 27, 3, "#ffd166");
+    px(8, 7, 29, 4, "#ffd166");
     px(12, 5, 4, 4, "#ff8aa0");
     px(20, 4, 5, 4, "#fff7fb");
     px(30, 5, 4, 4, "#ff8aa0");
@@ -2078,35 +2097,24 @@ function drawSpeechBubble(x, y, text) {
 }
 
 function drawThumbsUp(x, y, scale) {
-  const unit = scale;
+  const unit = scale * 0.58;
   const map = [
-    "...........SSSSS...............",
-    "..........SSSSSS...............",
-    ".........SSSSSSS...............",
-    "........SSSSSSSS...............",
-    ".......SSSSSSSSS...............",
-    "......SSSSSSSSS................",
-    ".....SSSSSSSSS.................",
-    "....SSSSSSSSS..................",
-    "...SSSSSSSSS...................",
-    "...SSSSSSSS....................",
-    "...SSSSSSSS....................",
-    "...SSSSSSSSSSSSSSSS............",
-    "...SSSSSSSSSSSSSSSSSSS.........",
-    "...SSSSSSSSSSSSSSSSSSSS........",
-    "..SSSSSSSSSSSSSSSSSSSSS........",
-    ".CCCCCCSSSSSSSSSSSSSSSS........",
-    ".CCCCCCSSSSSSSSSSSSSSS.........",
-    ".CCCCCCSSSSSSSSSSSSSSSS........",
-    ".CCCCCCSSSSSSSSSSSSSSS.........",
-    ".CCCCCCSSSSSSSSSSSSSSSS........",
-    ".CCCCCCSSSSSSSSSSSSSSS.........",
-    ".CCCCCCSSSSSSSSSSSSSS..........",
-    ".CCCCCCSSSSSSSSSSSSS...........",
-    ".CCCCCCSSSSSSSSSSSS............",
-    ".CCCCCCSSSSSSSSSS..............",
-    ".CCCCCCSSSSSSSS................",
-    ".CCCCCC........................",
+    "........SSSS.........",
+    ".......SSSSS.........",
+    "......SSSSSS.........",
+    ".....SSSSSSS.........",
+    "....SSSSSSS..........",
+    "...SSSSSSS...........",
+    "..SSSSSSS............",
+    "..SSSSSSSSSSSS.......",
+    "..SSSSSSSSSSSSSS.....",
+    ".CCCCSSSSSSSSSSS.....",
+    ".CCCCSSSSSSSSSSSS....",
+    ".CCCCSSSSSSSSSSS.....",
+    ".CCCCSSSSSSSSSS......",
+    ".CCCCSSSSSSSSS.......",
+    ".CCCCSSSSSS..........",
+    ".CCCC................",
   ];
   const colors = {
     S: "#f4d2bf",
@@ -2117,15 +2125,13 @@ function drawThumbsUp(x, y, scale) {
   ctx.translate(x, y);
   drawPixelMap(map, colors, unit, Math.max(1, unit * 0.22));
   ctx.fillStyle = "#fff4ee";
-  ctx.fillRect(9 * unit, 3 * unit, 2 * unit, unit);
-  ctx.fillRect(19 * unit, 15 * unit, 7 * unit, unit);
-  ctx.fillRect(19 * unit, 17 * unit, 6 * unit, unit);
-  ctx.fillRect(19 * unit, 19 * unit, 6 * unit, unit);
-  ctx.fillRect(18 * unit, 21 * unit, 5 * unit, unit);
+  ctx.fillRect(7 * unit, 2 * unit, 2 * unit, unit);
+  ctx.fillRect(12 * unit, 9 * unit, 5 * unit, unit);
+  ctx.fillRect(12 * unit, 11 * unit, 5 * unit, unit);
+  ctx.fillRect(12 * unit, 13 * unit, 4 * unit, unit);
   ctx.fillStyle = "#ffd166";
-  ctx.fillRect(26 * unit, 4 * unit, unit, unit);
-  ctx.fillRect(28 * unit, 6 * unit, unit, unit);
-  ctx.fillRect(27 * unit, 8 * unit, unit, unit);
+  ctx.fillRect(18 * unit, 4 * unit, unit, unit);
+  ctx.fillRect(19 * unit, 6 * unit, unit, unit);
   ctx.restore();
 }
 
@@ -2139,7 +2145,11 @@ function drawDandruffGame() {
   ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
   ctx.fillRect(layout.x - layout.width * 0.48, layout.y + layout.height * 0.49, layout.width * 0.96, 10);
 
-  ctx.drawImage(layout.sprite, layout.left, layout.top, layout.width, layout.height);
+  ctx.save();
+  ctx.translate(layout.x, layout.y);
+  ctx.drawImage(layout.sprite, -layout.width * 0.5, -layout.height * 0.5, layout.width, layout.height);
+  drawOutfitOverlay(layout.width, layout.height, layout.scale * 2, 0.5);
+  ctx.restore();
 
   for (const spot of state.dandruff) {
     const x = layout.left + spot.rx * layout.width;
@@ -2282,7 +2292,7 @@ function drawDandruffHint(layout) {
 function drawTenKCheer() {
   if (state.cheerTimer <= 0 || state.mode !== "playing") return;
 
-  const duration = 9.2;
+  const duration = 3.2;
   const progress = 1 - state.cheerTimer / duration;
   const alpha = state.cheerTimer < 1 ? state.cheerTimer : Math.min(1, progress / 0.12);
   const sprite = state.sprite || buildFallbackSprite();
@@ -2314,9 +2324,9 @@ function drawTenKCheer() {
   ctx.drawImage(sprite, x - width * 0.5, y - height * 0.62, width, height);
   ctx.shadowBlur = 0;
 
-  const raise = progress < 0.28 ? 90 * (1 - progress / 0.28) : 0;
-  const thumbWave = progress > 0.28 ? Math.sin(progress * Math.PI * 7) * 4 : 0;
-  drawThumbsUp(x + width * 0.12, y - height * 0.72 + raise + thumbWave, baseScale);
+  const raise = progress < 0.22 ? 52 * (1 - progress / 0.22) : 0;
+  const thumbWave = progress > 0.24 ? Math.sin(progress * Math.PI * 6) * 2 : 0;
+  drawThumbsUp(x + width * 0.18, y - height * 0.48 + raise + thumbWave, baseScale);
 
   ctx.fillStyle = "#ffd166";
   ctx.textAlign = "center";
