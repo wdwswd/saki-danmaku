@@ -20,6 +20,11 @@ const startBtn = document.querySelector("#startBtn");
 const retryBtn = document.querySelector("#retryBtn");
 const pauseBtn = document.querySelector("#pauseBtn");
 const musicBtn = document.querySelector("#musicBtn");
+const shopBtn = document.querySelector("#shopBtn");
+const shopPanel = document.querySelector("#shopPanel");
+const closeShopBtn = document.querySelector("#closeShopBtn");
+const shopItemsEl = document.querySelector("#shopItems");
+const shopMessageEl = document.querySelector("#shopMessage");
 const gameModeBtns = document.querySelectorAll("[data-game]");
 
 const asset = new Image();
@@ -66,6 +71,30 @@ const dandruffIntroLines = [
   { speaker: "Player", text: "I will click them away carefully." },
   { speaker: "Saki", text: "They come back slowly, so keep checking my head." },
   { speaker: "Saki", text: "Every five flakes you clean, I will say thank you." },
+];
+
+const outfitCatalog = [
+  {
+    id: "maid",
+    name: "Maid Outfit",
+    price: 120,
+    description: "A black-and-white pixel maid dress with apron sparkle.",
+    preview: "linear-gradient(90deg, #111015 0 32%, #ffffff 32% 48%, #a58cff 48% 60%, #111015 60% 100%)",
+  },
+  {
+    id: "sailor",
+    name: "Sailor Uniform",
+    price: 180,
+    description: "A blue sailor collar, pleated skirt, and red ribbon.",
+    preview: "linear-gradient(90deg, #3157a8 0 38%, #fff7fb 38% 56%, #e64068 56% 66%, #3157a8 66% 100%)",
+  },
+  {
+    id: "magical",
+    name: "Magical Girl Costume",
+    price: 260,
+    description: "Bright magical layers with star pixels and violet glow.",
+    preview: "linear-gradient(90deg, #ff63a8 0 30%, #ffd166 30% 42%, #ffffff 42% 54%, #8069ff 54% 100%)",
+  },
 ];
 
 const state = {
@@ -122,6 +151,10 @@ const state = {
   dandruffEmoteTimer: 0,
   dandruffMessage: "Click the pixels in Saki's hair",
   bottlePulse: 0,
+  equippedOutfit: "default",
+  ownedOutfits: new Set(["default"]),
+  shopMessage: "Break danmaku to earn coins, then buy outfits here.",
+  shopResumeOnClose: false,
   sprite: null,
   cleanSprite: null,
 };
@@ -446,10 +479,85 @@ function toggleMusic() {
   if (state.mode === "playing") startMusic();
 }
 
+function openShop() {
+  state.shopMessage = state.gameType === "danmaku" ? "Spend coins from broken danmaku." : "Outfits are mainly for the shooting game.";
+  state.shopResumeOnClose = false;
+  if (state.mode === "playing") {
+    state.shopResumeOnClose = true;
+    state.mode = "paused";
+    pauseBtn.textContent = "▶";
+    pauseMusic();
+  }
+  renderShop();
+  shopPanel.classList.remove("hidden");
+}
+
+function closeShop() {
+  shopPanel.classList.add("hidden");
+  if (state.shopResumeOnClose && state.mode === "paused") {
+    state.mode = "playing";
+    state.lastFrame = performance.now();
+    pauseBtn.textContent = "Ⅱ";
+    startMusic();
+  }
+  state.shopResumeOnClose = false;
+}
+
+function renderShop() {
+  shopMessageEl.textContent = state.shopMessage;
+  shopItemsEl.innerHTML = "";
+
+  for (const outfit of outfitCatalog) {
+    const owned = state.ownedOutfits.has(outfit.id);
+    const equipped = state.equippedOutfit === outfit.id;
+    const buttonText = equipped ? "Equipped" : owned ? "Equip" : `Buy ${outfit.price}`;
+
+    const card = document.createElement("article");
+    card.className = "shop-card";
+    card.innerHTML = `
+      <div class="shop-preview" style="background-image: ${outfit.preview}"></div>
+      <h3>${outfit.name}</h3>
+      <p>${outfit.description}</p>
+      <div class="shop-price"><span>Cost</span><strong>${outfit.price} coins</strong></div>
+      <button class="shop-buy-button${equipped ? " equipped" : ""}" type="button" data-outfit="${outfit.id}">
+        ${buttonText}
+      </button>
+    `;
+    shopItemsEl.appendChild(card);
+  }
+}
+
+function buyOrEquipOutfit(outfitId) {
+  const outfit = outfitCatalog.find((item) => item.id === outfitId);
+  if (!outfit) return;
+
+  if (state.ownedOutfits.has(outfit.id)) {
+    state.equippedOutfit = outfit.id;
+    state.shopMessage = `${outfit.name} equipped.`;
+    renderShop();
+    return;
+  }
+
+  if (state.gold < outfit.price) {
+    state.shopMessage = `Need ${outfit.price - state.gold} more coins for ${outfit.name}.`;
+    renderShop();
+    return;
+  }
+
+  state.gold -= outfit.price;
+  state.ownedOutfits.add(outfit.id);
+  state.equippedOutfit = outfit.id;
+  state.shopMessage = `${outfit.name} bought and equipped.`;
+  spawnBurst(state.player.x, state.player.y - 36, "#ffd166", 18);
+  updateHud();
+  renderShop();
+}
+
 function setGameType(gameType) {
   if (!["danmaku", "dandruff"].includes(gameType) || state.gameType === gameType) return;
 
   state.gameType = gameType;
+  closeShop();
   updateGameModeButtons();
   state.pointer.active = false;
   state.bullets.length = 0;
@@ -1241,9 +1349,56 @@ function drawPlayer() {
   ctx.globalAlpha = player.invuln > 0 && Math.floor(state.time * 18) % 2 === 0 ? 0.68 : 1;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(sprite, -width * 0.5, -height * 0.62, width, height);
+  drawOutfitOverlay(width, height, scale);
   drawPixelGun(width, height, scale, player.muzzle > 0);
   ctx.restore();
   ctx.imageSmoothingEnabled = true;
+}
+
+function drawOutfitOverlay(playerWidth, playerHeight, scale) {
+  if (state.equippedOutfit === "default") return;
+
+  const ox = -playerWidth * 0.5;
+  const oy = -playerHeight * 0.62;
+  const px = (x, y, w, h, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(ox + x * scale, oy + y * scale, w * scale, h * scale);
+  };
+
+  if (state.equippedOutfit === "maid") {
+    px(12, 47, 21, 12, "#111015");
+    px(16, 40, 13, 18, "#fff7fb");
+    px(18, 42, 9, 4, "#ffffff");
+    px(14, 51, 4, 6, "#ffffff");
+    px(27, 51, 4, 6, "#ffffff");
+    px(18, 55, 9, 4, "#d9d1ff");
+    px(12, 9, 5, 2, "#ffffff");
+    px(27, 9, 5, 2, "#ffffff");
+    px(19, 8, 6, 2, "#ffffff");
+    px(21, 50, 3, 6, "#151218");
+  } else if (state.equippedOutfit === "sailor") {
+    px(12, 48, 21, 11, "#3157a8");
+    px(14, 39, 17, 9, "#fff7fb");
+    px(12, 42, 8, 6, "#3157a8");
+    px(25, 42, 8, 6, "#3157a8");
+    px(20, 43, 5, 8, "#e64068");
+    px(18, 55, 3, 4, "#fff7fb");
+    px(23, 55, 3, 4, "#fff7fb");
+    px(28, 55, 3, 4, "#fff7fb");
+    px(15, 50, 16, 2, "#6bd3ff");
+  } else if (state.equippedOutfit === "magical") {
+    px(9, 45, 5, 14, "#8069ff");
+    px(31, 45, 5, 14, "#8069ff");
+    px(12, 47, 21, 12, "#ff63a8");
+    px(16, 40, 13, 18, "#ffffff");
+    px(18, 48, 9, 11, "#ffd166");
+    px(20, 42, 5, 7, "#8069ff");
+    px(14, 53, 4, 4, "#fff7fb");
+    px(27, 53, 4, 4, "#fff7fb");
+    px(35, 6, 3, 3, "#ffd166");
+    px(38, 3, 2, 2, "#ffffff");
+    px(8, 28, 3, 3, "#ffd166");
+  }
 }
 
 function drawPixelGun(playerWidth, playerHeight, scale, firing) {
@@ -1956,6 +2111,16 @@ startBtn.addEventListener("click", () => advanceIntro());
 retryBtn.addEventListener("click", resetGame);
 pauseBtn.addEventListener("click", togglePause);
 musicBtn.addEventListener("click", toggleMusic);
+shopBtn.addEventListener("click", openShop);
+closeShopBtn.addEventListener("click", closeShop);
+shopPanel.addEventListener("click", (event) => {
+  if (event.target === shopPanel) closeShop();
+});
+shopItemsEl.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-outfit]");
+  if (!button) return;
+  buyOrEquipOutfit(button.dataset.outfit);
+});
 for (const button of gameModeBtns) {
   button.addEventListener("click", () => setGameType(button.dataset.game));
 }

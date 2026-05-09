@@ -59,7 +59,7 @@ button {
   right: clamp(10px, 2.6vw, 24px);
   z-index: 3;
   display: grid;
-  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px;
+  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px 44px;
   gap: 8px;
   align-items: center;
   pointer-events: none;
@@ -277,6 +277,110 @@ button {
     8px 8px 0 #08070b,
     inset 0 0 0 3px rgba(255, 255, 255, 0.04);
   text-align: center;
+}
+
+.shop-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(760px, calc(100vw - 64px));
+  padding: 22px;
+  border: 3px solid var(--line);
+  background: var(--panel-strong);
+  box-shadow:
+    8px 8px 0 #08070b,
+    inset 0 0 0 3px rgba(255, 255, 255, 0.04);
+  transform: translate(-50%, -50%);
+}
+
+.shop-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shop-message {
+  min-height: 22px;
+  margin: 10px 0 18px;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shop-card {
+  min-height: 210px;
+  padding: 14px;
+  border: 2px solid var(--line);
+  background: #17131f;
+  box-shadow:
+    4px 4px 0 #08070b,
+    inset 0 0 0 2px rgba(255, 255, 255, 0.04);
+}
+
+.shop-preview {
+  height: 62px;
+  margin-bottom: 12px;
+  border: 2px solid #3b3248;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 4px, transparent 4px 8px),
+    #0c0a11;
+  image-rendering: pixelated;
+}
+
+.shop-card h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.shop-card p {
+  min-height: 42px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.shop-price {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shop-buy-button {
+  width: 100%;
+  min-height: 38px;
+  border: 2px solid var(--line);
+  border-radius: 0;
+  background: #241b2f;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shop-buy-button:hover,
+.shop-buy-button:focus-visible {
+  border-color: var(--mint);
+  color: var(--mint);
+  outline: none;
+}
+
+.shop-buy-button.equipped {
+  border-color: var(--gold);
+  background: #3b3142;
+  color: var(--gold);
 }
 
 .conversation-frame {
