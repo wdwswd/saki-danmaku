@@ -75,8 +75,12 @@ const state = {
   level: 1,
   levelGold: 0,
   levelPulse: 0,
-  tenKCheered: false,
+  nextSurpriseScore: 10000,
+  cheerMilestone: 0,
   cheerTimer: 0,
+  seenBulletTier: 0,
+  upgradeTimer: 0,
+  upgradeTier: 0,
   musicEnabled: true,
   musicStarted: false,
   musicIndex: 0,
@@ -105,11 +109,14 @@ const random = (min, max) => min + Math.random() * (max - min);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const nextLevelCost = (level) => 24 + level * 12;
 const bulletPalettes = [
-  { core: "#5df0c4", glow: "rgba(93, 240, 196, 0.8)", trail: "rgba(93, 240, 196, 0.24)" },
-  { core: "#ffd166", glow: "rgba(255, 209, 102, 0.86)", trail: "rgba(255, 209, 102, 0.28)" },
-  { core: "#c9f8ff", glow: "rgba(107, 211, 255, 0.9)", trail: "rgba(107, 211, 255, 0.3)" },
-  { core: "#ff63a8", glow: "rgba(255, 99, 168, 0.9)", trail: "rgba(255, 99, 168, 0.3)" },
-  { core: "#ffffff", glow: "rgba(255, 255, 255, 0.95)", trail: "rgba(180, 140, 255, 0.36)" },
+  { core: "#5df0c4", accent: "#c9fff2", glow: "rgba(93, 240, 196, 0.8)", trail: "rgba(93, 240, 196, 0.24)" },
+  { core: "#ffd166", accent: "#fff0a8", glow: "rgba(255, 209, 102, 0.86)", trail: "rgba(255, 209, 102, 0.28)" },
+  { core: "#6bd3ff", accent: "#e3fbff", glow: "rgba(107, 211, 255, 0.9)", trail: "rgba(107, 211, 255, 0.3)" },
+  { core: "#ff63a8", accent: "#ffd4e8", glow: "rgba(255, 99, 168, 0.9)", trail: "rgba(255, 99, 168, 0.3)" },
+  { core: "#ffffff", accent: "#b48cff", glow: "rgba(255, 255, 255, 0.95)", trail: "rgba(180, 140, 255, 0.36)" },
+  { core: "#ff8c42", accent: "#ffe2ad", glow: "rgba(255, 140, 66, 0.92)", trail: "rgba(255, 140, 66, 0.3)" },
+  { core: "#7cff6b", accent: "#e4ffd8", glow: "rgba(124, 255, 107, 0.92)", trail: "rgba(124, 255, 107, 0.3)" },
+  { core: "#d46bff", accent: "#f5d7ff", glow: "rgba(212, 107, 255, 0.92)", trail: "rgba(212, 107, 255, 0.3)" },
 ];
 const dist2 = (ax, ay, bx, by) => {
   const dx = ax - bx;
@@ -331,8 +338,12 @@ function resetGame() {
   state.level = 1;
   state.levelGold = 0;
   state.levelPulse = 0;
-  state.tenKCheered = false;
+  state.nextSurpriseScore = 10000;
+  state.cheerMilestone = 0;
   state.cheerTimer = 0;
+  state.seenBulletTier = 0;
+  state.upgradeTimer = 0;
+  state.upgradeTier = 0;
   state.spawnTimer = 0.35;
   state.fireTimer = 0.08;
   state.shake = 0;
@@ -387,7 +398,11 @@ function spriteScale() {
 }
 
 function scoreTier() {
-  return Math.min(bulletPalettes.length - 1, Math.floor(state.score / 5000));
+  return Math.floor(state.score / 5000);
+}
+
+function bulletPowerTier() {
+  return Math.min(6, scoreTier());
 }
 
 function hardModeLevel() {
@@ -444,34 +459,40 @@ function fireBullet(force = false) {
   if (!force && state.fireTimer > 0) return;
 
   const tier = scoreTier();
+  const power = bulletPowerTier();
   const levelSpread = Math.min(2, Math.floor((state.level - 1) / 2));
   const spread =
-    Math.max(tier, levelSpread) === 0
+    Math.max(power, levelSpread) === 0
       ? [0]
-      : Math.max(tier, levelSpread) === 1
+      : Math.max(power, levelSpread) === 1
         ? [-0.055, 0.055]
-        : tier >= 3
+        : power >= 5
+          ? [-0.15, -0.085, -0.025, 0.025, 0.085, 0.15]
+          : power >= 3
           ? [-0.12, -0.045, 0.045, 0.12]
           : [-0.08, 0, 0.08];
-  const palette = bulletPalettes[tier];
-  const fireDelay = Math.max(0.075, 0.16 - (state.level - 1) * 0.008 - tier * 0.008);
+  const palette = bulletPalettes[tier % bulletPalettes.length];
+  const fireDelay = Math.max(0.058, 0.16 - (state.level - 1) * 0.008 - power * 0.009);
 
   for (const offset of spread) {
     state.bullets.push({
       x: state.player.x + 32,
       y: state.player.y - 8,
-      vx: 650 + tier * 35,
-      vy: offset * (650 + tier * 35),
-      radius: 5 + tier * 0.7,
-      life: 1.2 + tier * 0.05,
+      vx: 650 + power * 42,
+      vy: offset * (650 + power * 42),
+      radius: 5 + power * 0.75,
+      life: 1.2 + power * 0.06,
       color: palette.core,
+      accent: palette.accent,
       glow: palette.glow,
       trail: palette.trail,
       tier,
+      power,
+      spin: random(0, Math.PI * 2),
     });
   }
 
-  state.player.muzzle = 0.09;
+  state.player.muzzle = 0.11 + power * 0.006;
   state.fireTimer = force ? Math.min(0.08, fireDelay) : fireDelay;
 }
 
@@ -511,6 +532,7 @@ function spawnEnemy() {
 }
 
 function addGoldReward(enemy) {
+  const previousScore = state.score;
   const reward = enemy.maxHp * 5 + Math.min(8, Math.floor(state.combo / 3));
   state.gold += reward;
   state.levelGold += reward;
@@ -526,17 +548,46 @@ function addGoldReward(enemy) {
   }
 
   spawnCoinText(enemy.x, enemy.y, reward);
-  checkScoreMilestones();
+  checkScoreMilestones(previousScore);
   updateHud();
 }
 
-function checkScoreMilestones() {
-  if (!state.tenKCheered && state.score >= 10000) {
-    state.tenKCheered = true;
-    state.cheerTimer = 9.2;
-    state.shake = Math.max(state.shake, 9);
-    spawnBurst(state.player.x, state.player.y - 38, "#ffd166", 36);
+function checkScoreMilestones(previousScore) {
+  const newTier = Math.floor(state.score / 5000);
+  if (newTier > state.seenBulletTier) {
+    for (let tier = state.seenBulletTier + 1; tier <= newTier; tier += 1) {
+      triggerBulletUpgrade(tier);
+    }
+    state.seenBulletTier = newTier;
   }
+
+  while (state.score >= state.nextSurpriseScore) {
+    triggerScoreSurprise(state.nextSurpriseScore);
+    state.nextSurpriseScore += 10000;
+  }
+
+  if (previousScore < 10000 && state.score >= 10000 && state.cheerTimer <= 0) {
+    triggerScoreSurprise(10000);
+  }
+}
+
+function triggerBulletUpgrade(tier) {
+  const palette = bulletPalettes[tier % bulletPalettes.length];
+  state.upgradeTimer = 2.2;
+  state.upgradeTier = tier;
+  state.shake = Math.max(state.shake, 9 + Math.min(5, tier));
+  spawnBurst(state.player.x + 36, state.player.y - 10, palette.core, 44);
+  spawnShockwave(state.player.x + 34, state.player.y - 8, palette.core, 1);
+  spawnShockwave(state.player.x + 34, state.player.y - 8, palette.accent, 0.72);
+}
+
+function triggerScoreSurprise(milestone) {
+  state.cheerMilestone = milestone;
+  state.cheerTimer = 8.8;
+  state.shake = Math.max(state.shake, 11);
+  spawnBurst(state.player.x, state.player.y - 38, "#ffd166", 44);
+  spawnShockwave(state.width * 0.5, state.height * 0.52, "#ffd166", 1);
+  spawnShockwave(state.width * 0.5, state.height * 0.52, "#ffffff", 0.78);
 }
 
 function spawnBurst(x, y, color, amount = 12) {
@@ -552,6 +603,24 @@ function spawnBurst(x, y, color, amount = 12) {
       color,
     });
   }
+}
+
+function spawnShockwave(x, y, color, alpha = 1) {
+  state.particles.push({
+    x,
+    y,
+    vx: 0,
+    vy: 0,
+    size: 0,
+    life: 0.72,
+    maxLife: 0.72,
+    color,
+    alpha,
+    ring: true,
+    startRadius: 8,
+    maxRadius: 160 + random(0, 70),
+    lineWidth: random(3, 6),
+  });
 }
 
 function spawnCoinText(x, y, amount) {
@@ -609,6 +678,7 @@ function updateWorld(dt) {
   state.shake = Math.max(0, state.shake - dt * 42);
   state.levelPulse = Math.max(0, state.levelPulse - dt);
   state.cheerTimer = Math.max(0, state.cheerTimer - dt);
+  state.upgradeTimer = Math.max(0, state.upgradeTimer - dt);
 
   updatePlayer(dt);
   fireBullet(false);
@@ -816,24 +886,54 @@ function drawPixelMap(map, colors, unit, edge = Math.max(1, unit * 0.28)) {
 
 function drawBullets() {
   for (const bullet of state.bullets) {
+    const power = bullet.power || bullet.tier || 0;
+    const spin = bullet.spin || 0;
+    const flare = 1 + Math.sin(state.time * 18 + spin) * 0.08;
+
     ctx.save();
     ctx.translate(bullet.x, bullet.y);
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.42 + Math.min(0.28, power * 0.04);
     ctx.fillStyle = bullet.trail || "rgba(93, 240, 196, 0.24)";
-    ctx.fillRect(-20 - bullet.tier * 4, -2, 18 + bullet.tier * 3, 4);
-    if (bullet.tier >= 2) {
-      ctx.fillRect(-12, -8, 10 + bullet.tier * 2, 3);
-      ctx.fillRect(-12, 5, 10 + bullet.tier * 2, 3);
+    ctx.fillRect(-20 - power * 5, -2, 18 + power * 4, 4);
+    if (power >= 2) {
+      ctx.fillRect(-14 - power * 2, -8, 12 + power * 2, 3);
+      ctx.fillRect(-14 - power * 2, 5, 12 + power * 2, 3);
     }
+    if (power >= 4) {
+      ctx.fillRect(-26 - power * 2, -13, 20 + power * 2, 2);
+      ctx.fillRect(-26 - power * 2, 11, 20 + power * 2, 2);
+    }
+
     ctx.globalAlpha = 1;
     ctx.fillStyle = bullet.color;
     ctx.shadowColor = bullet.glow || bullet.color;
-    ctx.shadowBlur = 14 + bullet.tier * 5;
-    ctx.fillRect(-5, -3 - bullet.tier * 0.5, 13 + bullet.tier * 3, 6 + bullet.tier);
-    ctx.fillRect(2, -6 - bullet.tier, 4 + bullet.tier, 12 + bullet.tier * 2);
-    if (bullet.tier >= 3) {
+    ctx.shadowBlur = 16 + power * 7;
+    ctx.fillRect(-5, (-3 - power * 0.5) * flare, 13 + power * 4, 6 + power);
+    ctx.fillRect(2, -6 - power, 4 + power, 12 + power * 2);
+    if (power >= 1) {
+      ctx.fillStyle = bullet.accent || "#ffffff";
+      ctx.fillRect(4, -2 - power * 0.3, 8 + power * 2, 4 + power * 0.5);
+    }
+    if (power >= 3) {
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(3, -2, 9, 4);
+      ctx.fillRect(3, -2, 10 + power * 2, 4);
+      ctx.strokeStyle = bullet.accent || bullet.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-8 - power * 2, 0);
+      ctx.lineTo(1, -8 - power);
+      ctx.lineTo(14 + power * 4, 0);
+      ctx.lineTo(1, 8 + power);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    if (power >= 5) {
+      ctx.globalAlpha = 0.82;
+      ctx.strokeStyle = bullet.glow || bullet.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(6 + power * 1.5, 0, 12 + Math.sin(state.time * 22 + spin) * 3, 0, Math.PI * 2);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -881,14 +981,27 @@ function drawEnemies() {
 function drawParticles() {
   for (const particle of state.particles) {
     const alpha = clamp(particle.life / particle.maxLife, 0, 1);
-    ctx.globalAlpha = alpha;
-    if (particle.text) {
+
+    if (particle.ring) {
+      const progress = 1 - alpha;
+      const radius = particle.startRadius + (particle.maxRadius - particle.startRadius) * progress;
+      ctx.save();
+      ctx.globalAlpha = alpha * (particle.alpha || 1);
+      ctx.strokeStyle = particle.color;
+      ctx.lineWidth = particle.lineWidth;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    } else if (particle.text) {
+      ctx.globalAlpha = alpha;
       ctx.fillStyle = particle.color;
       ctx.font = "900 18px Inter, PingFang SC, Microsoft YaHei, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(particle.text, particle.x, particle.y);
     } else {
+      ctx.globalAlpha = alpha;
       ctx.fillStyle = particle.color;
       ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
     }
@@ -909,6 +1022,42 @@ function drawLevelUp() {
   ctx.shadowColor = "rgba(255, 209, 102, 0.65)";
   ctx.shadowBlur = 18;
   ctx.fillText(`等级 ${state.level}`, state.width * 0.5, playTop() + 22);
+  ctx.restore();
+}
+
+function drawBulletUpgradeShock() {
+  if (state.upgradeTimer <= 0 || state.mode !== "playing") return;
+
+  const alpha = clamp(state.upgradeTimer / 2.2, 0, 1);
+  const palette = bulletPalettes[state.upgradeTier % bulletPalettes.length];
+  const x = state.player.x + 36;
+  const y = state.player.y - 8;
+
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.22;
+  ctx.fillStyle = palette.core;
+  ctx.fillRect(0, 0, state.width, state.height);
+
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = palette.accent;
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 4; i += 1) {
+    const radius = (1 - alpha) * (90 + i * 44) + i * 18;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = palette.glow;
+  ctx.shadowBlur = 22;
+  ctx.font = "900 30px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(`BULLET LV ${state.upgradeTier + 1}`, state.width * 0.5, playTop() + 52);
+  ctx.font = "900 17px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.fillStyle = palette.accent;
+  ctx.fillText("SHOCK UPGRADE", state.width * 0.5, playTop() + 83);
   ctx.restore();
 }
 
@@ -1018,7 +1167,15 @@ function drawTenKCheer() {
   ctx.fillStyle = "rgba(18, 16, 20, 0.52)";
   ctx.fillRect(0, 0, state.width, state.height);
 
-  drawSpeechBubble(state.width * 0.5 - 52, state.height * 0.18, "10,000! THUMBS UP!");
+  const milestone = state.cheerMilestone || 10000;
+  const cheerLine =
+    milestone % 30000 === 0
+      ? `${milestone.toLocaleString()}! SUPER SAKI!`
+      : milestone % 20000 === 0
+        ? `${milestone.toLocaleString()}! KEEP GOING!`
+        : `${milestone.toLocaleString()}! THUMBS UP!`;
+
+  drawSpeechBubble(state.width * 0.5 - 52, state.height * 0.18, cheerLine);
 
   ctx.imageSmoothingEnabled = false;
   ctx.shadowColor = "rgba(255, 209, 102, 0.72)";
@@ -1034,7 +1191,7 @@ function drawTenKCheer() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "900 44px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
-  ctx.fillText("10000 POINTS", state.width * 0.5, y + height * 0.44);
+  ctx.fillText(`${milestone.toLocaleString()} POINTS`, state.width * 0.5, y + height * 0.44);
   ctx.restore();
   ctx.imageSmoothingEnabled = true;
 }
@@ -1070,6 +1227,7 @@ function draw() {
   if (state.mode !== "intro") drawPlayer();
   drawIntroPreview();
   drawLevelUp();
+  drawBulletUpgradeShock();
   drawTenKCheer();
   ctx.restore();
   drawPaused();
