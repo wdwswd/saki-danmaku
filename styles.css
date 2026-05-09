@@ -59,7 +59,7 @@ button {
   right: clamp(10px, 2.6vw, 24px);
   z-index: 3;
   display: grid;
-  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px 44px 44px;
+  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px 44px 44px 44px;
   gap: 8px;
   align-items: center;
   pointer-events: none;
@@ -285,7 +285,8 @@ button {
 }
 
 .shop-panel,
-.crypto-panel {
+.crypto-panel,
+.leaderboard-panel {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -301,6 +302,10 @@ button {
 
 .crypto-panel {
   width: min(640px, calc(100vw - 64px));
+}
+
+.leaderboard-panel {
+  width: min(620px, calc(100vw - 64px));
 }
 
 .shop-header {
@@ -428,6 +433,54 @@ button {
   margin-top: 14px;
 }
 
+.leaderboard-submit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 10px;
+  align-items: end;
+}
+
+.leaderboard-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(46vh, 380px);
+  margin: 18px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 110px;
+  gap: 10px;
+  align-items: center;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 2px solid #3b3248;
+  background: #17131f;
+  box-shadow: 3px 3px 0 #08070b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.leaderboard-rank {
+  color: var(--gold);
+}
+
+.leaderboard-name {
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-score {
+  color: var(--mint);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .conversation-frame {
   position: absolute;
   left: 50%;
@@ -518,6 +571,44 @@ h2 {
 .choice-grid.hidden,
 .primary-button.hidden {
   display: none;
+}
+
+.record-score-block {
+  margin-top: 20px;
+}
+
+.record-score-block.hidden,
+.score-choice-row.hidden,
+.rank-save-form.hidden {
+  display: none;
+}
+
+.record-score-prompt,
+.end-rank-status {
+  margin: 0;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.score-choice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.rank-save-form {
+  margin-top: 12px;
+  text-align: left;
+}
+
+.end-rank-status {
+  min-height: 20px;
+  margin-top: 12px;
+  color: var(--mint);
+  text-align: left;
 }
 
 .choice-button {

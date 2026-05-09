@@ -21,10 +21,25 @@ const retryBtn = document.querySelector("#retryBtn");
 const pauseBtn = document.querySelector("#pauseBtn");
 const musicBtn = document.querySelector("#musicBtn");
 const shopBtn = document.querySelector("#shopBtn");
+const leaderboardBtn = document.querySelector("#leaderboardBtn");
 const shopPanel = document.querySelector("#shopPanel");
 const closeShopBtn = document.querySelector("#closeShopBtn");
 const shopItemsEl = document.querySelector("#shopItems");
 const shopMessageEl = document.querySelector("#shopMessage");
+const leaderboardPanel = document.querySelector("#leaderboardPanel");
+const closeLeaderboardBtn = document.querySelector("#closeLeaderboardBtn");
+const leaderboardStatusEl = document.querySelector("#leaderboardStatus");
+const leaderboardNameEl = document.querySelector("#leaderboardName");
+const leaderboardSubmitBtn = document.querySelector("#leaderboardSubmitBtn");
+const leaderboardListEl = document.querySelector("#leaderboardList");
+const submitScoreBtn = document.querySelector("#submitScoreBtn");
+const skipScoreBtn = document.querySelector("#skipScoreBtn");
+const recordScoreBlock = document.querySelector("#recordScoreBlock");
+const recordScoreChoices = document.querySelector("#recordScoreChoices");
+const endScoreForm = document.querySelector("#endScoreForm");
+const endLeaderboardNameEl = document.querySelector("#endLeaderboardName");
+const endLeaderboardSubmitBtn = document.querySelector("#endLeaderboardSubmitBtn");
+const endScoreStatusEl = document.querySelector("#endScoreStatus");
 const messageBtn = document.querySelector("#messageBtn");
 const messagePanel = document.querySelector("#messagePanel");
 const closeMessageBtn = document.querySelector("#closeMessageBtn");
@@ -38,6 +53,7 @@ const gameModeBtns = document.querySelectorAll("[data-game]");
 const asset = new Image();
 asset.src = "assets/character-source.png";
 
+const leaderboardApiBaseUrl = window.SAKI_CONFIG?.leaderboardApiBaseUrl?.trim() || "";
 const musicTracks = ["assets/music/skybit-dogfight.mp3", "assets/music/skybit-dogfight-alt.mp3"];
 const introMusic = new Audio("assets/music/conversation-theme.mp4");
 introMusic.preload = "auto";
@@ -163,6 +179,9 @@ const state = {
   ownedOutfits: new Set(["default"]),
   shopMessage: "Break danmaku to earn coins, then buy outfits here.",
   shopResumeOnClose: false,
+  leaderboardResumeOnClose: false,
+  leaderboardRows: [],
+  leaderboardScore: 0,
   messageResumeOnClose: false,
   sprite: null,
   cleanSprite: null,
@@ -535,6 +554,174 @@ function closeMessagePanel() {
   state.messageResumeOnClose = false;
 }
 
+function leaderboardEndpoint(path) {
+  return `${leaderboardApiBaseUrl.replace(/\/$/, "")}${path}`;
+}
+
+function openLeaderboard(score = state.gameType === "danmaku" ? Math.floor(state.score) : 0) {
+  state.leaderboardScore = Math.max(state.leaderboardScore, score);
+  state.leaderboardResumeOnClose = false;
+
+  if (state.mode === "playing") {
+    state.leaderboardResumeOnClose = true;
+    state.mode = "paused";
+    pauseBtn.textContent = "▶";
+    pauseMusic();
+  }
+
+  leaderboardNameEl.value = localStorage.getItem("sakiLeaderboardName") || "";
+  leaderboardPanel.classList.remove("hidden");
+  renderLeaderboard();
+  loadLeaderboard();
+}
+
+function closeLeaderboard() {
+  leaderboardPanel.classList.add("hidden");
+  if (state.leaderboardResumeOnClose && state.mode === "paused") {
+    state.mode = "playing";
+    state.lastFrame = performance.now();
+    pauseBtn.textContent = "Ⅱ";
+    startMusic();
+  }
+  state.leaderboardResumeOnClose = false;
+}
+
+function renderLeaderboard() {
+  const submitScore = Math.floor(state.leaderboardScore || 0);
+  const apiMode = Boolean(leaderboardApiBaseUrl);
+  leaderboardStatusEl.textContent = apiMode
+    ? `Cloud ranking ready. Current score: ${submitScore}`
+    : `Local preview ranking. Add Worker URL in config.js for online ranking. Current score: ${submitScore}`;
+  leaderboardSubmitBtn.disabled = submitScore <= 0;
+  leaderboardListEl.innerHTML = "";
+
+  if (!state.leaderboardRows.length) {
+    const empty = document.createElement("li");
+    empty.className = "leaderboard-row";
+    empty.innerHTML = `<span class="leaderboard-rank">--</span><span class="leaderboard-name">No scores yet</span><span class="leaderboard-score">0</span>`;
+    leaderboardListEl.appendChild(empty);
+    return;
+  }
+
+  state.leaderboardRows.forEach((row, index) => {
+    const item = document.createElement("li");
+    item.className = "leaderboard-row";
+    item.innerHTML = `
+      <span class="leaderboard-rank">#${index + 1}</span>
+      <span class="leaderboard-name"></span>
+      <span class="leaderboard-score">${Number(row.score || 0).toLocaleString()}</span>
+    `;
+    item.querySelector(".leaderboard-name").textContent = row.name || row.player_name || "Player";
+    leaderboardListEl.appendChild(item);
+  });
+}
+
+function loadLocalLeaderboard() {
+  return JSON.parse(localStorage.getItem("sakiLocalLeaderboard") || "[]");
+}
+
+function saveLocalLeaderboard(rows) {
+  localStorage.setItem("sakiLocalLeaderboard", JSON.stringify(rows.slice(0, 20)));
+}
+
+function resetEndScorePrompt() {
+  recordScoreBlock.classList.remove("hidden");
+  recordScoreChoices.classList.remove("hidden");
+  endScoreForm.classList.add("hidden");
+  endLeaderboardSubmitBtn.disabled = false;
+  endScoreStatusEl.textContent = "";
+  endLeaderboardNameEl.value = "";
+}
+
+function showEndScoreNamePrompt() {
+  recordScoreChoices.classList.add("hidden");
+  endScoreForm.classList.remove("hidden");
+  endScoreStatusEl.textContent = "Enter your name to save this run.";
+  endLeaderboardNameEl.value = localStorage.getItem("sakiLeaderboardName") || "";
+  endLeaderboardNameEl.focus();
+}
+
+function skipEndScoreSubmission() {
+  recordScoreChoices.classList.add("hidden");
+  endScoreForm.classList.add("hidden");
+  endScoreStatusEl.textContent = "Score recording skipped.";
+}
+
+async function loadLeaderboard() {
+  if (!leaderboardApiBaseUrl) {
+    state.leaderboardRows = loadLocalLeaderboard();
+    renderLeaderboard();
+    return;
+  }
+
+  try {
+    const response = await fetch(leaderboardEndpoint("/leaderboard"));
+    if (!response.ok) throw new Error("leaderboard load failed");
+    const data = await response.json();
+    state.leaderboardRows = data.scores || [];
+  } catch (error) {
+    leaderboardStatusEl.textContent = "Could not load online ranking. Showing local preview.";
+    state.leaderboardRows = loadLocalLeaderboard();
+  }
+
+  renderLeaderboard();
+}
+
+async function saveLeaderboardScore(name, score, statusEl) {
+  if (!name) {
+    statusEl.textContent = "Enter a player name first.";
+    return false;
+  }
+  if (score <= 0) {
+    statusEl.textContent = "Finish a shooting run before submitting.";
+    return false;
+  }
+
+  localStorage.setItem("sakiLeaderboardName", name);
+
+  try {
+    if (leaderboardApiBaseUrl) {
+      const response = await fetch(leaderboardEndpoint("/score"), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, score, game: "danmaku" }),
+      });
+      if (!response.ok) throw new Error("score submit failed");
+      statusEl.textContent = "Score recorded on the ranking.";
+      await loadLeaderboard();
+    } else {
+      const rows = loadLocalLeaderboard().filter((row) => row.name.toLowerCase() !== name.toLowerCase());
+      rows.push({ name, score, updated_at: new Date().toISOString() });
+      rows.sort((a, b) => b.score - a.score);
+      saveLocalLeaderboard(rows);
+      state.leaderboardRows = rows.slice(0, 20);
+      statusEl.textContent = "Saved locally. Add the Worker URL in config.js for online ranking.";
+      renderLeaderboard();
+    }
+    return true;
+  } catch (error) {
+    statusEl.textContent = "Could not submit score.";
+    return false;
+  }
+}
+
+async function submitLeaderboardScore() {
+  const name = leaderboardNameEl.value.trim().slice(0, 18);
+  const score = Math.floor(state.leaderboardScore || 0);
+  leaderboardSubmitBtn.disabled = true;
+  await saveLeaderboardScore(name, score, leaderboardStatusEl);
+  leaderboardSubmitBtn.disabled = false;
+}
+
+async function submitEndLeaderboardScore() {
+  const name = endLeaderboardNameEl.value.trim().slice(0, 18);
+  const score = Math.floor(state.leaderboardScore || 0);
+  endLeaderboardSubmitBtn.disabled = true;
+  const saved = await saveLeaderboardScore(name, score, endScoreStatusEl);
+  endLeaderboardSubmitBtn.disabled = saved;
+  if (saved) endScoreForm.classList.add("hidden");
+}
+
 function bytesToBase64(bytes) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -663,6 +850,7 @@ function setGameType(gameType) {
   state.gameType = gameType;
   closeShop();
   closeMessagePanel();
+  closeLeaderboard();
   updateGameModeButtons();
   state.pointer.active = false;
   state.bullets.length = 0;
@@ -770,7 +958,10 @@ function resetDandruffGame() {
 
 function endGame() {
   state.mode = "over";
+  state.leaderboardScore = state.gameType === "danmaku" ? Math.floor(state.score) : 0;
   finalScoreEl.textContent = Math.floor(state.score).toString();
+  resetEndScorePrompt();
+  recordScoreBlock.classList.toggle("hidden", state.gameType !== "danmaku");
   endPanel.classList.remove("hidden");
   pauseMusic();
 }
@@ -2235,6 +2426,7 @@ retryBtn.addEventListener("click", resetGame);
 pauseBtn.addEventListener("click", togglePause);
 musicBtn.addEventListener("click", toggleMusic);
 shopBtn.addEventListener("click", openShop);
+leaderboardBtn.addEventListener("click", () => openLeaderboard());
 closeShopBtn.addEventListener("click", closeShop);
 shopPanel.addEventListener("click", (event) => {
   if (event.target === shopPanel) closeShop();
@@ -2251,6 +2443,17 @@ messagePanel.addEventListener("click", (event) => {
 });
 encryptMessageBtn.addEventListener("click", () => {
   generateEncryptedMessage();
+});
+closeLeaderboardBtn.addEventListener("click", closeLeaderboard);
+leaderboardPanel.addEventListener("click", (event) => {
+  if (event.target === leaderboardPanel) closeLeaderboard();
+});
+leaderboardSubmitBtn.addEventListener("click", submitLeaderboardScore);
+submitScoreBtn.addEventListener("click", showEndScoreNamePrompt);
+skipScoreBtn.addEventListener("click", skipEndScoreSubmission);
+endLeaderboardSubmitBtn.addEventListener("click", submitEndLeaderboardScore);
+endLeaderboardNameEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") submitEndLeaderboardScore();
 });
 for (const button of gameModeBtns) {
   button.addEventListener("click", () => setGameType(button.dataset.game));
