@@ -1,0 +1,8 @@
+name = "saki-danmaku-leaderboard"
+main = "src/index.js"
+compatibility_date = "2026-05-09"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "saki_danmaku_scores"
+database_id = "d26e2df9-ec0c-4677-be75-021310a07f02"
