@@ -1,6 +1,6 @@
 # Saki Danmaku Cloudflare Leaderboard
 
-This Worker stores each player's highest shooting-game score in Cloudflare D1.
+This Worker stores each player's highest shooting-game score in Cloudflare D1. Once the deployed Worker URL is added to the game's `config.js`, every player reads and writes the same shared online ranking.
 
 ## Files
 
@@ -40,3 +40,5 @@ window.SAKI_CONFIG = {
 ```
 
 Then upload/deploy the game files again.
+
+If `leaderboardApiBaseUrl` is left empty, the game will show that online ranking is not connected and will not save private local scores.

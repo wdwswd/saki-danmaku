@@ -610,14 +610,14 @@ function renderLeaderboard() {
   const apiMode = Boolean(leaderboardApiBaseUrl);
   leaderboardStatusEl.textContent = apiMode
     ? `Cloud ranking ready. Current score: ${submitScore}`
-    : `Local preview ranking. Add Worker URL in config.js for online ranking. Current score: ${submitScore}`;
-  leaderboardSubmitBtn.disabled = submitScore <= 0;
+    : "Online ranking is not connected yet. Deploy the Cloudflare Worker and set its URL in config.js.";
+  leaderboardSubmitBtn.disabled = !apiMode || submitScore <= 0;
   leaderboardListEl.innerHTML = "";
 
   if (!state.leaderboardRows.length) {
     const empty = document.createElement("li");
     empty.className = "leaderboard-row";
-    empty.innerHTML = `<span class="leaderboard-rank">--</span><span class="leaderboard-name">No scores yet</span><span class="leaderboard-score">0</span>`;
+    empty.innerHTML = `<span class="leaderboard-rank">--</span><span class="leaderboard-name">${apiMode ? "No scores yet" : "Connect online ranking first"}</span><span class="leaderboard-score">0</span>`;
     leaderboardListEl.appendChild(empty);
     return;
   }
@@ -633,14 +633,6 @@ function renderLeaderboard() {
     item.querySelector(".leaderboard-name").textContent = row.name || row.player_name || "Player";
     leaderboardListEl.appendChild(item);
   });
-}
-
-function loadLocalLeaderboard() {
-  return JSON.parse(localStorage.getItem("sakiLocalLeaderboard") || "[]");
-}
-
-function saveLocalLeaderboard(rows) {
-  localStorage.setItem("sakiLocalLeaderboard", JSON.stringify(rows.slice(0, 20)));
 }
 
 function resetEndScorePrompt() {
@@ -668,7 +660,7 @@ function skipEndScoreSubmission() {
 
 async function loadLeaderboard() {
   if (!leaderboardApiBaseUrl) {
-    state.leaderboardRows = loadLocalLeaderboard();
+    state.leaderboardRows = [];
     renderLeaderboard();
     return;
   }
@@ -679,14 +671,18 @@ async function loadLeaderboard() {
     const data = await response.json();
     state.leaderboardRows = data.scores || [];
   } catch (error) {
-    leaderboardStatusEl.textContent = "Could not load online ranking. Showing local preview.";
-    state.leaderboardRows = loadLocalLeaderboard();
+    leaderboardStatusEl.textContent = "Could not load online ranking. Check the Worker URL in config.js.";
+    state.leaderboardRows = [];
   }
 
   renderLeaderboard();
 }
 
 async function saveLeaderboardScore(name, score, statusEl) {
+  if (!leaderboardApiBaseUrl) {
+    statusEl.textContent = "Online ranking is not connected yet. Set the Worker URL in config.js.";
+    return false;
+  }
   if (!name) {
     statusEl.textContent = "Enter a player name first.";
     return false;
@@ -699,24 +695,14 @@ async function saveLeaderboardScore(name, score, statusEl) {
   localStorage.setItem("sakiLeaderboardName", name);
 
   try {
-    if (leaderboardApiBaseUrl) {
-      const response = await fetch(leaderboardEndpoint("/score"), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, score, game: "danmaku" }),
-      });
-      if (!response.ok) throw new Error("score submit failed");
-      statusEl.textContent = "Score recorded on the ranking.";
-      await loadLeaderboard();
-    } else {
-      const rows = loadLocalLeaderboard().filter((row) => row.name.toLowerCase() !== name.toLowerCase());
-      rows.push({ name, score, updated_at: new Date().toISOString() });
-      rows.sort((a, b) => b.score - a.score);
-      saveLocalLeaderboard(rows);
-      state.leaderboardRows = rows.slice(0, 20);
-      statusEl.textContent = "Saved locally. Add the Worker URL in config.js for online ranking.";
-      renderLeaderboard();
-    }
+    const response = await fetch(leaderboardEndpoint("/score"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, score, game: "danmaku" }),
+    });
+    if (!response.ok) throw new Error("score submit failed");
+    statusEl.textContent = "Score recorded on the ranking.";
+    await loadLeaderboard();
     return true;
   } catch (error) {
     statusEl.textContent = "Could not submit score.";
