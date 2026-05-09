@@ -1,3 +1,3 @@
 window.SAKI_CONFIG = {
-  leaderboardApiBaseUrl: "",
+  leaderboardApiBaseUrl: "https://saki-danmaku-leaderboard.tangxiao169.workers.dev",
 };
