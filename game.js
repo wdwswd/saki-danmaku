@@ -344,7 +344,7 @@ function resetGame() {
   state.seenBulletTier = 0;
   state.upgradeTimer = 0;
   state.upgradeTier = 0;
-  state.spawnTimer = 0.35;
+  state.spawnTimer = 0.24;
   state.fireTimer = 0.08;
   state.shake = 0;
   state.bullets.length = 0;
@@ -500,15 +500,16 @@ function spawnEnemy() {
   const text = badTexts[Math.floor(Math.random() * badTexts.length)];
   const textUnits = Array.from(text).length;
   const hard = hardModeLevel();
-  const hpMax = hard > 0 ? Math.min(6, 4 + Math.floor(hard / 3)) : 4;
-  const hp = clamp(1 + Math.floor(random(0, 1.1 + state.elapsed / 48 + state.level / 22 + hard * 0.16)), 1, hpMax);
-  const width = Math.max(78, 34 + textUnits * 19 + hp * 10);
-  const height = 30 + hp * 2;
+  const hpMax = hard > 0 ? 3 : 2;
+  const hpRoll = random(0, 0.72 + state.elapsed / 120 + state.level / 45 + hard * 0.08);
+  const hp = clamp(1 + Math.floor(hpRoll), 1, hpMax);
+  const width = Math.max(76, 34 + textUnits * 18 + hp * 6);
+  const height = 28 + hp * 2;
   const palette = [
-    ["#ff5370", "rgba(255, 83, 112, 0.18)"],
-    ["#ffd166", "rgba(255, 209, 102, 0.16)"],
-    ["#b48cff", "rgba(180, 140, 255, 0.18)"],
-    ["#ff8aa0", "rgba(255, 138, 160, 0.18)"],
+    ["#ff5370", "rgba(255, 83, 112, 0.24)"],
+    ["#ffd166", "rgba(255, 209, 102, 0.2)"],
+    ["#b48cff", "rgba(180, 140, 255, 0.24)"],
+    ["#ff8aa0", "rgba(255, 138, 160, 0.22)"],
   ][Math.floor(random(0, 4))];
 
   state.enemies.push({
@@ -519,7 +520,7 @@ function spawnEnemy() {
     height,
     hp,
     maxHp: hp,
-    speed: random(72, 128) + Math.min(72, state.elapsed * 0.9) + hard * 12,
+    speed: random(62, 108) + Math.min(58, state.elapsed * 0.64) + hard * 7,
     wobble: random(0.55, 1.45 + hard * 0.08),
     phase: random(0, Math.PI * 2),
     text,
@@ -527,8 +528,8 @@ function spawnEnemy() {
     fill: palette[1],
   });
 
-  const next = 1.22 - Math.min(0.42, state.elapsed / 110) - hard * 0.04 + random(-0.12, 0.22);
-  state.spawnTimer = Math.max(hard > 0 ? 0.32 : 0.48, next);
+  const next = 0.74 - Math.min(0.24, state.elapsed / 150) - hard * 0.025 + random(-0.08, 0.13);
+  state.spawnTimer = Math.max(hard > 0 ? 0.2 : 0.3, next);
 }
 
 function addGoldReward(enemy) {
@@ -623,6 +624,25 @@ function spawnShockwave(x, y, color, alpha = 1) {
   });
 }
 
+function spawnEnemyBreak(enemy) {
+  spawnBurst(enemy.x, enemy.y, enemy.color, 24);
+  spawnBurst(enemy.x, enemy.y, "#fff7fb", 10);
+  spawnShockwave(enemy.x, enemy.y, enemy.color, 0.68);
+
+  for (let i = 0; i < 18; i += 1) {
+    state.particles.push({
+      x: enemy.x + random(-enemy.width * 0.34, enemy.width * 0.34),
+      y: enemy.y + random(-enemy.height * 0.28, enemy.height * 0.28),
+      vx: random(-210, 95),
+      vy: random(-145, 145),
+      size: random(4, 9),
+      life: random(0.38, 0.82),
+      maxLife: 0.82,
+      color: i % 3 === 0 ? "#ffffff" : enemy.color,
+    });
+  }
+}
+
 function spawnCoinText(x, y, amount) {
   state.particles.push({
     x,
@@ -685,9 +705,12 @@ function updateWorld(dt) {
 
   if (state.spawnTimer <= 0) {
     const hard = hardModeLevel();
+    const enemyCap = 14 + Math.min(8, hard * 2);
     spawnEnemy();
-    if (state.elapsed > 60 && Math.random() > 0.82) spawnEnemy();
-    if (hard > 0 && Math.random() < Math.min(0.08 + hard * 0.035, 0.28)) spawnEnemy();
+    if (state.enemies.length < enemyCap && state.elapsed > 18 && Math.random() > 0.58) spawnEnemy();
+    if (state.enemies.length < enemyCap && hard > 0 && Math.random() < Math.min(0.16 + hard * 0.04, 0.38)) {
+      spawnEnemy();
+    }
   }
 
   for (const bullet of state.bullets) {
@@ -717,7 +740,7 @@ function updateWorld(dt) {
           state.combo += 1;
           state.score += 12 + Math.min(34, state.combo * 2);
           addGoldReward(enemy);
-          spawnBurst(enemy.x, enemy.y, enemy.color, 16);
+          spawnEnemyBreak(enemy);
           if (state.combo > 0 && state.combo % 12 === 0 && state.shield < 7) state.shield += 1;
           updateHud();
         }
@@ -946,33 +969,47 @@ function drawEnemies() {
   for (const enemy of state.enemies) {
     const left = enemy.x - enemy.width * 0.5;
     const top = enemy.y - enemy.height * 0.5;
+    const pixel = 4;
 
     ctx.save();
-    ctx.shadowColor = enemy.color;
-    ctx.shadowBlur = 18;
+    ctx.shadowColor = enemy.fill;
+    ctx.shadowBlur = 10;
     ctx.fillStyle = enemy.fill;
-    ctx.strokeStyle = enemy.color;
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, left, top, enemy.width, enemy.height, 8);
-    ctx.fill();
-    ctx.stroke();
+    ctx.fillRect(left + pixel, top, enemy.width - pixel * 2, enemy.height);
+    ctx.fillRect(left, top + pixel, enemy.width, enemy.height - pixel * 2);
 
     ctx.shadowBlur = 0;
-    ctx.fillStyle = enemy.color;
-    ctx.fillRect(left + 9, enemy.y - 7, 4, 14);
-    ctx.fillRect(left + 8, enemy.y + 10, 6, 3);
+    ctx.fillStyle = "rgba(12, 12, 15, 0.82)";
+    ctx.fillRect(left + pixel, top + pixel, enemy.width - pixel * 2, pixel);
+    ctx.fillRect(left + pixel, top + enemy.height - pixel * 2, enemy.width - pixel * 2, pixel);
+    ctx.fillRect(left + pixel, top + pixel, pixel, enemy.height - pixel * 2);
+    ctx.fillRect(left + enemy.width - pixel * 2, top + pixel, pixel, enemy.height - pixel * 2);
 
-    ctx.font = "700 15px Inter, PingFang SC, Microsoft YaHei, sans-serif";
+    ctx.fillStyle = enemy.color;
+    ctx.fillRect(left + pixel * 2, top + pixel * 2, pixel, pixel * 3);
+    ctx.fillRect(left + pixel * 3, top + pixel * 2, pixel, pixel);
+    ctx.fillRect(left + pixel * 2, top + enemy.height - pixel * 3, pixel * 2, pixel);
+    ctx.fillRect(left + enemy.width - pixel * 4, top + pixel * 2, pixel * 2, pixel);
+    ctx.fillRect(left + enemy.width - pixel * 3, top + enemy.height - pixel * 3, pixel, pixel);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+    ctx.fillRect(left + pixel * 5, top + pixel * 2, enemy.width * 0.28, pixel);
+    ctx.fillRect(left + enemy.width * 0.56, top + enemy.height - pixel * 3, enemy.width * 0.18, pixel);
+
+    ctx.font = "900 15px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
     ctx.fillStyle = "#fff7fb";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowBlur = 2;
     ctx.fillText(enemy.text, enemy.x + 8, enemy.y + 0.5);
+    ctx.shadowBlur = 0;
 
     if (enemy.maxHp > 1) {
       const barWidth = enemy.width - 24;
       const ratio = clamp(enemy.hp / enemy.maxHp, 0, 1);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.14)";
-      ctx.fillRect(left + 12, top + enemy.height - 5, barWidth, 2);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+      ctx.fillRect(left + 12, top + enemy.height - 7, barWidth, 3);
       ctx.fillStyle = enemy.color;
-      ctx.fillRect(left + 12, top + enemy.height - 5, barWidth * ratio, 2);
+      ctx.fillRect(left + 12, top + enemy.height - 7, barWidth * ratio, 3);
     }
     ctx.restore();
   }
