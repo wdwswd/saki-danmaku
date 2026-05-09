@@ -99,23 +99,37 @@ const outfitCatalog = [
   {
     id: "maid",
     name: "Maid Outfit",
-    price: 120,
+    price: 1200,
     description: "A black-and-white pixel maid dress with apron sparkle.",
     preview: "linear-gradient(90deg, #111015 0 32%, #ffffff 32% 48%, #a58cff 48% 60%, #111015 60% 100%)",
   },
   {
     id: "sailor",
     name: "Sailor Uniform",
-    price: 180,
+    price: 1200,
     description: "A blue sailor collar, pleated skirt, and red ribbon.",
     preview: "linear-gradient(90deg, #3157a8 0 38%, #fff7fb 38% 56%, #e64068 56% 66%, #3157a8 66% 100%)",
   },
   {
     id: "magical",
     name: "Magical Girl Costume",
-    price: 260,
+    price: 1200,
     description: "Bright magical layers with star pixels and violet glow.",
     preview: "linear-gradient(90deg, #ff63a8 0 30%, #ffd166 30% 42%, #ffffff 42% 54%, #8069ff 54% 100%)",
+  },
+  {
+    id: "mech",
+    name: "Mech Warrior",
+    price: 1200,
+    description: "Steel armor plates, neon visor pixels, and battle boosters.",
+    preview: "linear-gradient(90deg, #5f6f80 0 24%, #b9d3e8 24% 42%, #5df0c4 42% 52%, #2c3440 52% 100%)",
+  },
+  {
+    id: "medieval",
+    name: "European Medieval Dress",
+    price: 1200,
+    description: "A noble gown with gold trim, sleeves, and flower crown pixels.",
+    preview: "linear-gradient(90deg, #5b2d6f 0 28%, #ffd166 28% 38%, #f7e8ff 38% 54%, #7d4aa8 54% 100%)",
   },
 ];
 
@@ -903,7 +917,7 @@ function resetDanmakuGame() {
   state.seenBulletTier = 0;
   state.upgradeTimer = 0;
   state.upgradeTier = 0;
-  state.spawnTimer = 0.24;
+  state.spawnTimer = 0.16;
   state.fireTimer = 0.08;
   state.shake = 0;
   state.bullets.length = 0;
@@ -1134,7 +1148,7 @@ function spawnEnemy() {
     height,
     hp,
     maxHp: hp,
-    speed: random(62, 108) + Math.min(58, state.elapsed * 0.64) + hard * 7,
+    speed: random(78, 132) + Math.min(66, state.elapsed * 0.72) + hard * 8,
     wobble: random(0.55, 1.45 + hard * 0.08),
     phase: random(0, Math.PI * 2),
     text,
@@ -1142,8 +1156,8 @@ function spawnEnemy() {
     fill: palette[1],
   });
 
-  const next = 0.74 - Math.min(0.24, state.elapsed / 150) - hard * 0.025 + random(-0.08, 0.13);
-  state.spawnTimer = Math.max(hard > 0 ? 0.2 : 0.3, next);
+  const next = 0.31 - Math.min(0.08, state.elapsed / 180) - hard * 0.012 + random(-0.035, 0.055);
+  state.spawnTimer = Math.max(hard > 0 ? 0.16 : 0.2, next);
 }
 
 function addGoldReward(enemy) {
@@ -1497,7 +1511,7 @@ function updateWorld(dt) {
 
   if (state.spawnTimer <= 0) {
     const hard = hardModeLevel();
-    const enemyCap = 14 + Math.min(8, hard * 2);
+    const enemyCap = 20 + Math.min(10, hard * 2);
     spawnEnemy();
     if (state.enemies.length < enemyCap && state.elapsed > 18 && Math.random() > 0.58) spawnEnemy();
     if (state.enemies.length < enemyCap && hard > 0 && Math.random() < Math.min(0.16 + hard * 0.04, 0.38)) {
@@ -1713,6 +1727,41 @@ function drawOutfitOverlay(playerWidth, playerHeight, scale) {
     px(6, 27, 4, 4, "#ffd166");
     px(4, 31, 3, 3, "#ffffff");
     px(34, 26, 5, 5, "#ff63a8");
+  } else if (state.equippedOutfit === "mech") {
+    px(8, 43, 29, 17, "#2c3440");
+    px(11, 39, 23, 11, "#758596");
+    px(14, 47, 17, 12, "#b9d3e8");
+    px(9, 41, 6, 9, "#5f6f80");
+    px(30, 41, 6, 9, "#5f6f80");
+    px(17, 44, 11, 4, "#5df0c4");
+    px(20, 50, 5, 7, "#2c3440");
+    px(8, 9, 29, 5, "#5f6f80");
+    px(12, 6, 21, 4, "#2c3440");
+    px(17, 8, 11, 3, "#5df0c4");
+    px(5, 25, 6, 9, "#758596");
+    px(34, 25, 6, 9, "#758596");
+    px(3, 31, 5, 6, "#5df0c4");
+    px(37, 31, 5, 6, "#5df0c4");
+    px(13, 57, 6, 4, "#5df0c4");
+    px(26, 57, 6, 4, "#5df0c4");
+  } else if (state.equippedOutfit === "medieval") {
+    px(7, 44, 31, 16, "#5b2d6f");
+    px(11, 39, 23, 12, "#f7e8ff");
+    px(14, 46, 17, 14, "#7d4aa8");
+    px(18, 41, 9, 18, "#ffd166");
+    px(9, 47, 5, 10, "#d7b3ff");
+    px(31, 47, 5, 10, "#d7b3ff");
+    px(12, 54, 21, 3, "#ffd166");
+    px(16, 57, 4, 3, "#f7e8ff");
+    px(25, 57, 4, 3, "#f7e8ff");
+    px(9, 8, 27, 3, "#ffd166");
+    px(12, 5, 4, 4, "#ff8aa0");
+    px(20, 4, 5, 4, "#fff7fb");
+    px(30, 5, 4, 4, "#ff8aa0");
+    px(6, 20, 7, 8, "#ffd166");
+    px(35, 20, 5, 8, "#ffd166");
+    px(5, 24, 3, 3, "#f7e8ff");
+    px(38, 24, 3, 3, "#f7e8ff");
   }
 }
 
