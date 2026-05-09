@@ -20,6 +20,7 @@ const startBtn = document.querySelector("#startBtn");
 const retryBtn = document.querySelector("#retryBtn");
 const pauseBtn = document.querySelector("#pauseBtn");
 const musicBtn = document.querySelector("#musicBtn");
+const gameModeBtns = document.querySelectorAll("[data-game]");
 
 const asset = new Image();
 asset.src = "assets/character-source.png";
@@ -58,8 +59,18 @@ const introLines = [
   { speaker: "Saki", text: "If we reach 10,000 points, I will show you my victory pose." },
 ];
 
+const dandruffIntroLines = [
+  { speaker: "Saki", text: "Hey... can you help me with something tiny?", choices: ["Yes", "Sure"] },
+  { speaker: "Player", text: "Yes, Saki. Tell me what is happening." },
+  { speaker: "Saki", text: "There are little pixel flakes hiding in my hair." },
+  { speaker: "Player", text: "I will click them away carefully." },
+  { speaker: "Saki", text: "They come back slowly, so keep checking my head." },
+  { speaker: "Saki", text: "Every five flakes you clean, I will say thank you." },
+];
+
 const state = {
   mode: "intro",
+  gameType: "danmaku",
   introIndex: 0,
   introChoice: "",
   width: 0,
@@ -102,12 +113,19 @@ const state = {
   bullets: [],
   enemies: [],
   particles: [],
+  dandruff: [],
+  dandruffRemoved: 0,
+  dandruffRespawnTimer: 0,
+  dandruffThanksTimer: 0,
+  dandruffEmoteTimer: 0,
+  dandruffMessage: "Click the pixels in Saki's hair",
   sprite: null,
 };
 
 const random = (min, max) => min + Math.random() * (max - min);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const nextLevelCost = (level) => 24 + level * 12;
+const maxParticles = 170;
 const bulletPalettes = [
   { core: "#5df0c4", accent: "#c9fff2", glow: "rgba(93, 240, 196, 0.8)", trail: "rgba(93, 240, 196, 0.24)" },
   { core: "#ffd166", accent: "#fff0a8", glow: "rgba(255, 209, 102, 0.86)", trail: "rgba(255, 209, 102, 0.28)" },
@@ -242,7 +260,8 @@ function buildFallbackSprite() {
 }
 
 function renderIntroDialogue() {
-  const line = introLines[state.introIndex] || introLines[introLines.length - 1];
+  const lines = state.gameType === "dandruff" ? dandruffIntroLines : introLines;
+  const line = lines[state.introIndex] || lines[lines.length - 1];
   speakerNameEl.textContent = line.speaker;
   dialogueTextEl.textContent =
     line.speaker === "Player" && state.introChoice
@@ -251,7 +270,7 @@ function renderIntroDialogue() {
 
   dialogueChoicesEl.classList.toggle("hidden", !line.choices);
   startBtn.classList.toggle("hidden", Boolean(line.choices));
-  startBtn.textContent = state.introIndex >= introLines.length - 1 ? "Start Game" : "Next";
+  startBtn.textContent = state.introIndex >= lines.length - 1 ? "Start Game" : "Next";
 }
 
 function renderIntroSaki() {
@@ -264,10 +283,11 @@ function renderIntroSaki() {
 }
 
 function advanceIntro(choice = "") {
+  const lines = state.gameType === "dandruff" ? dandruffIntroLines : introLines;
   startIntroMusic();
   if (choice) state.introChoice = choice;
 
-  if (state.introIndex < introLines.length - 1) {
+  if (state.introIndex < lines.length - 1) {
     state.introIndex += 1;
     renderIntroDialogue();
     return;
@@ -327,7 +347,41 @@ function toggleMusic() {
   if (state.mode === "playing") startMusic();
 }
 
+function setGameType(gameType) {
+  if (!["danmaku", "dandruff"].includes(gameType) || state.gameType === gameType) return;
+
+  state.gameType = gameType;
+  updateGameModeButtons();
+  state.pointer.active = false;
+  state.bullets.length = 0;
+  state.enemies.length = 0;
+  state.particles.length = 0;
+
+  if (state.mode === "playing" || state.mode === "paused" || state.mode === "over") resetGame();
+  else {
+    renderIntroDialogue();
+    updateHud();
+  }
+}
+
+function updateGameModeButtons() {
+  for (const button of gameModeBtns) {
+    const active = button.dataset.game === state.gameType;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
 function resetGame() {
+  if (state.gameType === "dandruff") {
+    resetDandruffGame();
+    return;
+  }
+
+  resetDanmakuGame();
+}
+
+function resetDanmakuGame() {
   stopIntroMusic();
   state.mode = "playing";
   state.elapsed = 0;
@@ -361,6 +415,44 @@ function resetGame() {
   startMusic();
 }
 
+function resetDandruffGame() {
+  stopIntroMusic();
+  state.mode = "playing";
+  state.elapsed = 0;
+  state.score = 0;
+  state.shield = 0;
+  state.combo = 0;
+  state.gold = 0;
+  state.level = 1;
+  state.levelGold = 0;
+  state.levelPulse = 0;
+  state.cheerTimer = 0;
+  state.upgradeTimer = 0;
+  state.spawnTimer = 0;
+  state.fireTimer = 0;
+  state.shake = 0;
+  state.bullets.length = 0;
+  state.enemies.length = 0;
+  state.particles.length = 0;
+  state.dandruff.length = 0;
+  state.dandruffRemoved = 0;
+  state.dandruffRespawnTimer = 0.8;
+  state.dandruffThanksTimer = 0;
+  state.dandruffEmoteTimer = 0;
+  state.dandruffMessage = "Click the pixels in Saki's hair";
+  state.player.x = state.width * 0.5;
+  state.player.y = state.height * 0.58;
+  state.pointer.active = false;
+
+  for (let i = 0; i < 16; i += 1) spawnDandruff(true);
+
+  startPanel.classList.add("hidden");
+  endPanel.classList.add("hidden");
+  pauseBtn.textContent = "Ⅱ";
+  updateHud();
+  startMusic();
+}
+
 function endGame() {
   state.mode = "over";
   finalScoreEl.textContent = Math.floor(state.score).toString();
@@ -382,6 +474,17 @@ function togglePause() {
 }
 
 function updateHud() {
+  if (state.gameType === "dandruff") {
+    scoreEl.textContent = state.dandruffRemoved.toString();
+    shieldEl.textContent = "OK";
+    comboEl.textContent = state.combo.toString();
+    goldEl.textContent = state.gold.toString();
+    levelEl.textContent = state.level.toString();
+    xpTextEl.textContent = `${state.dandruff.length} spots`;
+    xpFillEl.style.width = `${Math.round(clamp(state.dandruff.length / 22, 0, 1) * 100)}%`;
+    return;
+  }
+
   const cost = nextLevelCost(state.level);
   const xpRatio = clamp(state.levelGold / cost, 0, 1);
   scoreEl.textContent = Math.floor(state.score).toString();
@@ -403,6 +506,10 @@ function scoreTier() {
 
 function bulletPowerTier() {
   return Math.min(6, scoreTier());
+}
+
+function activeBulletPalette() {
+  return bulletPalettes[scoreTier() % bulletPalettes.length];
 }
 
 function hardModeLevel() {
@@ -576,23 +683,25 @@ function triggerBulletUpgrade(tier) {
   const palette = bulletPalettes[tier % bulletPalettes.length];
   state.upgradeTimer = 2.2;
   state.upgradeTier = tier;
-  state.shake = Math.max(state.shake, 9 + Math.min(5, tier));
-  spawnBurst(state.player.x + 36, state.player.y - 10, palette.core, 44);
+  state.shake = Math.max(state.shake, 7 + Math.min(4, tier));
+  spawnBurst(state.player.x + 36, state.player.y - 10, palette.core, 26);
   spawnShockwave(state.player.x + 34, state.player.y - 8, palette.core, 1);
-  spawnShockwave(state.player.x + 34, state.player.y - 8, palette.accent, 0.72);
+  spawnShockwave(state.player.x + 34, state.player.y - 8, palette.accent, 0.58);
 }
 
 function triggerScoreSurprise(milestone) {
   state.cheerMilestone = milestone;
   state.cheerTimer = 8.8;
-  state.shake = Math.max(state.shake, 11);
-  spawnBurst(state.player.x, state.player.y - 38, "#ffd166", 44);
+  state.shake = Math.max(state.shake, 8);
+  spawnBurst(state.player.x, state.player.y - 38, "#ffd166", 28);
   spawnShockwave(state.width * 0.5, state.height * 0.52, "#ffd166", 1);
-  spawnShockwave(state.width * 0.5, state.height * 0.52, "#ffffff", 0.78);
+  spawnShockwave(state.width * 0.5, state.height * 0.52, "#ffffff", 0.56);
 }
 
 function spawnBurst(x, y, color, amount = 12) {
-  for (let i = 0; i < amount; i += 1) {
+  const available = Math.max(0, maxParticles - state.particles.length);
+  const count = Math.min(amount, available);
+  for (let i = 0; i < count; i += 1) {
     state.particles.push({
       x,
       y,
@@ -607,6 +716,7 @@ function spawnBurst(x, y, color, amount = 12) {
 }
 
 function spawnShockwave(x, y, color, alpha = 1) {
+  if (state.particles.length >= maxParticles) return;
   state.particles.push({
     x,
     y,
@@ -619,17 +729,18 @@ function spawnShockwave(x, y, color, alpha = 1) {
     alpha,
     ring: true,
     startRadius: 8,
-    maxRadius: 160 + random(0, 70),
-    lineWidth: random(3, 6),
+    maxRadius: 110 + random(0, 54),
+    lineWidth: random(3, 5),
   });
 }
 
 function spawnEnemyBreak(enemy) {
-  spawnBurst(enemy.x, enemy.y, enemy.color, 24);
-  spawnBurst(enemy.x, enemy.y, "#fff7fb", 10);
-  spawnShockwave(enemy.x, enemy.y, enemy.color, 0.68);
+  spawnBurst(enemy.x, enemy.y, enemy.color, 13);
+  spawnBurst(enemy.x, enemy.y, "#fff7fb", 5);
+  spawnShockwave(enemy.x, enemy.y, enemy.color, 0.48);
 
-  for (let i = 0; i < 18; i += 1) {
+  const count = Math.min(8, Math.max(0, maxParticles - state.particles.length));
+  for (let i = 0; i < count; i += 1) {
     state.particles.push({
       x: enemy.x + random(-enemy.width * 0.34, enemy.width * 0.34),
       y: enemy.y + random(-enemy.height * 0.28, enemy.height * 0.28),
@@ -655,6 +766,104 @@ function spawnCoinText(x, y, amount) {
     color: "#ffd166",
     text: `+${amount}`,
   });
+}
+
+function dandruffLayout() {
+  const sprite = state.sprite || buildFallbackSprite();
+  const scale = clamp(Math.min(state.width / 250, state.height / 300), 3.2, 5.2);
+  const width = sprite.width * scale;
+  const height = sprite.height * scale;
+  return {
+    sprite,
+    scale,
+    width,
+    height,
+    x: state.width * 0.5,
+    y: state.height * 0.62,
+    left: state.width * 0.5 - width * 0.5,
+    top: state.height * 0.62 - height * 0.62,
+  };
+}
+
+function spawnDandruff(initial = false) {
+  if (state.dandruff.length >= 24) return;
+  state.dandruff.push({
+    rx: random(0.18, 0.74),
+    ry: random(0.06, 0.36),
+    size: random(3, 5),
+    phase: random(0, Math.PI * 2),
+    fresh: initial ? 0 : 0.4,
+  });
+}
+
+function updateDandruffWorld(dt) {
+  state.elapsed += dt;
+  state.dandruffRespawnTimer -= dt;
+  state.dandruffThanksTimer = Math.max(0, state.dandruffThanksTimer - dt);
+  state.dandruffEmoteTimer = Math.max(0, state.dandruffEmoteTimer - dt);
+
+  for (const spot of state.dandruff) {
+    spot.fresh = Math.max(0, spot.fresh - dt);
+  }
+
+  if (state.dandruffRespawnTimer <= 0) {
+    spawnDandruff(false);
+    state.dandruffRespawnTimer = random(1.0, 1.8);
+  }
+
+  updateHud();
+}
+
+function handleDandruffClick(point) {
+  const layout = dandruffLayout();
+  for (let i = state.dandruff.length - 1; i >= 0; i -= 1) {
+    const spot = state.dandruff[i];
+    const x = layout.left + spot.rx * layout.width;
+    const y = layout.top + spot.ry * layout.height;
+    const radius = Math.max(12, spot.size * layout.scale * 0.85);
+
+    if (dist2(point.x, point.y, x, y) <= radius * radius) {
+      state.dandruff.splice(i, 1);
+      state.dandruffRemoved += 1;
+      state.score = state.dandruffRemoved;
+      state.gold += 1;
+      state.combo += 1;
+      spawnBurst(x, y, "#ffffff", 9);
+      spawnBurst(x, y, "#ffd166", 3);
+      spawnCoinText(x, y, 1);
+
+      if (state.dandruffRemoved % 5 === 0) {
+        state.dandruffThanksTimer = 2.6;
+        state.dandruffEmoteTimer = 1.6;
+        state.dandruffMessage = "thank you!";
+        state.level += 1;
+        spawnPixelEmotes(x, y - 26);
+      }
+
+      updateHud();
+      return;
+    }
+  }
+
+  state.combo = 0;
+  updateHud();
+}
+
+function spawnPixelEmotes(x, y) {
+  const emoteColors = ["#ff63a8", "#ffd166", "#5df0c4"];
+  for (let i = 0; i < 8; i += 1) {
+    state.particles.push({
+      x: x + random(-36, 36),
+      y: y + random(-12, 14),
+      vx: random(-28, 28),
+      vy: random(-92, -42),
+      size: random(5, 8),
+      life: random(0.72, 1.1),
+      maxLife: 1.1,
+      color: emoteColors[i % emoteColors.length],
+      emote: i % 2 === 0 ? "heart" : "smile",
+    });
+  }
 }
 
 function damageShield(amount) {
@@ -691,6 +900,10 @@ function enemyHitsPlayer(enemy) {
 
 function updateWorld(dt) {
   if (state.mode !== "playing") return;
+  if (state.gameType === "dandruff") {
+    updateDandruffWorld(dt);
+    return;
+  }
 
   state.elapsed += dt;
   state.fireTimer -= dt;
@@ -734,7 +947,7 @@ function updateWorld(dt) {
       if (pointInEnemy(bullet, enemy)) {
         bullet.dead = true;
         enemy.hp -= 1;
-        spawnBurst(bullet.x, bullet.y, bullet.color, 5);
+        spawnBurst(bullet.x, bullet.y, bullet.color, 3);
         if (enemy.hp <= 0) {
           enemy.dead = true;
           state.combo += 1;
@@ -774,19 +987,27 @@ function updateWorld(dt) {
 }
 
 function drawBackground() {
+  const palette = activeBulletPalette();
+  const pulse = 0.5 + Math.sin(state.time * 1.2) * 0.5;
   const gradient = ctx.createLinearGradient(0, 0, state.width, state.height);
   gradient.addColorStop(0, "#151218");
-  gradient.addColorStop(0.45, "#231921");
-  gradient.addColorStop(1, "#10201d");
+  gradient.addColorStop(0.44, palette.trail);
+  gradient.addColorStop(1, "#101b1d");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, state.width, state.height);
 
   ctx.save();
-  ctx.globalAlpha = 0.36;
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.globalAlpha = 0.06 + pulse * 0.04;
+  ctx.fillStyle = palette.core;
+  ctx.fillRect(0, 0, state.width, state.height);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.24;
+  ctx.strokeStyle = palette.trail;
   ctx.lineWidth = 1;
-  const gap = 54;
-  const offset = (state.time * 18) % gap;
+  const gap = 64;
+  const offset = (state.time * 14) % gap;
   for (let x = -state.height; x < state.width + state.height; x += gap) {
     ctx.beginPath();
     ctx.moveTo(x + offset, 0);
@@ -796,12 +1017,12 @@ function drawBackground() {
   ctx.restore();
 
   ctx.save();
-  ctx.globalAlpha = 0.22;
-  for (let i = 0; i < 58; i += 1) {
-    const x = (i * 149 + state.time * (18 + (i % 4) * 6)) % (state.width + 36);
+  ctx.globalAlpha = 0.18;
+  for (let i = 0; i < 36; i += 1) {
+    const x = (i * 149 + state.time * (12 + (i % 4) * 5)) % (state.width + 36);
     const y = (i * 83) % state.height;
     const size = 2 + (i % 3);
-    ctx.fillStyle = i % 5 === 0 ? "#5df0c4" : i % 3 === 0 ? "#ffd166" : "#9c7cff";
+    ctx.fillStyle = i % 5 === 0 ? palette.accent : i % 3 === 0 ? palette.core : "#fff7fb";
     ctx.fillRect(Math.floor(x), Math.floor(y), size, size);
   }
   ctx.restore();
@@ -930,7 +1151,7 @@ function drawBullets() {
     ctx.globalAlpha = 1;
     ctx.fillStyle = bullet.color;
     ctx.shadowColor = bullet.glow || bullet.color;
-    ctx.shadowBlur = 16 + power * 7;
+    ctx.shadowBlur = 8 + power * 3;
     ctx.fillRect(-5, (-3 - power * 0.5) * flare, 13 + power * 4, 6 + power);
     ctx.fillRect(2, -6 - power, 4 + power, 12 + power * 2);
     if (power >= 1) {
@@ -954,9 +1175,8 @@ function drawBullets() {
       ctx.globalAlpha = 0.82;
       ctx.strokeStyle = bullet.glow || bullet.color;
       ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(6 + power * 1.5, 0, 12 + Math.sin(state.time * 22 + spin) * 3, 0, Math.PI * 2);
-      ctx.stroke();
+      const ring = 20 + Math.sin(state.time * 22 + spin) * 4;
+      ctx.strokeRect(6 + power * 1.5 - ring * 0.5, -ring * 0.5, ring, ring);
     }
     ctx.restore();
   }
@@ -972,8 +1192,6 @@ function drawEnemies() {
     const pixel = 4;
 
     ctx.save();
-    ctx.shadowColor = enemy.fill;
-    ctx.shadowBlur = 10;
     ctx.fillStyle = enemy.fill;
     ctx.fillRect(left + pixel, top, enemy.width - pixel * 2, enemy.height);
     ctx.fillRect(left, top + pixel, enemy.width, enemy.height - pixel * 2);
@@ -1022,13 +1240,24 @@ function drawParticles() {
     if (particle.ring) {
       const progress = 1 - alpha;
       const radius = particle.startRadius + (particle.maxRadius - particle.startRadius) * progress;
+      const pixel = 6;
+      const left = Math.round((particle.x - radius) / pixel) * pixel;
+      const top = Math.round((particle.y - radius) / pixel) * pixel;
+      const size = Math.round((radius * 2) / pixel) * pixel;
       ctx.save();
       ctx.globalAlpha = alpha * (particle.alpha || 1);
       ctx.strokeStyle = particle.color;
       ctx.lineWidth = particle.lineWidth;
-      ctx.beginPath();
-      ctx.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.strokeRect(left, top, size, size);
+      ctx.globalAlpha *= 0.55;
+      ctx.strokeRect(left + pixel * 2, top + pixel * 2, Math.max(pixel, size - pixel * 4), Math.max(pixel, size - pixel * 4));
+      ctx.restore();
+    } else if (particle.emote) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(particle.x, particle.y);
+      if (particle.emote === "heart") drawPixelHeart(0, 0, particle.size, particle.color);
+      else drawPixelSmile(0, 0, particle.size, particle.color);
       ctx.restore();
     } else if (particle.text) {
       ctx.globalAlpha = alpha;
@@ -1046,6 +1275,28 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
+function drawPixelHeart(x, y, unit, color) {
+  ctx.fillStyle = color;
+  const map = ["XX.XX", "XXXXX", ".XXX.", "..X.."];
+  for (let row = 0; row < map.length; row += 1) {
+    for (let col = 0; col < map[row].length; col += 1) {
+      if (map[row][col] === "X") ctx.fillRect(x + col * unit, y + row * unit, unit, unit);
+    }
+  }
+}
+
+function drawPixelSmile(x, y, unit, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, unit * 5, unit);
+  ctx.fillRect(x, y + unit, unit, unit * 3);
+  ctx.fillRect(x + unit * 4, y + unit, unit, unit * 3);
+  ctx.fillRect(x, y + unit * 4, unit * 5, unit);
+  ctx.fillStyle = "#151218";
+  ctx.fillRect(x + unit, y + unit * 2, unit, unit);
+  ctx.fillRect(x + unit * 3, y + unit * 2, unit, unit);
+  ctx.fillRect(x + unit * 2, y + unit * 3, unit, unit);
+}
+
 function drawLevelUp() {
   if (state.levelPulse <= 0 || state.mode !== "playing") return;
 
@@ -1057,7 +1308,7 @@ function drawLevelUp() {
   ctx.font = "900 28px Inter, PingFang SC, Microsoft YaHei, sans-serif";
   ctx.fillStyle = "#ffd166";
   ctx.shadowColor = "rgba(255, 209, 102, 0.65)";
-  ctx.shadowBlur = 18;
+  ctx.shadowBlur = 10;
   ctx.fillText(`等级 ${state.level}`, state.width * 0.5, playTop() + 22);
   ctx.restore();
 }
@@ -1078,17 +1329,19 @@ function drawBulletUpgradeShock() {
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = palette.accent;
   ctx.lineWidth = 3;
-  for (let i = 0; i < 4; i += 1) {
-    const radius = (1 - alpha) * (90 + i * 44) + i * 18;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.stroke();
+  for (let i = 0; i < 3; i += 1) {
+    const radius = (1 - alpha) * (74 + i * 38) + i * 16;
+    const pixel = 8;
+    const left = Math.round((x - radius) / pixel) * pixel;
+    const top = Math.round((y - radius) / pixel) * pixel;
+    const size = Math.round((radius * 2) / pixel) * pixel;
+    ctx.strokeRect(left, top, size, size);
   }
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.shadowColor = palette.glow;
-  ctx.shadowBlur = 22;
+  ctx.shadowBlur = 10;
   ctx.font = "900 30px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.fillText(`BULLET LV ${state.upgradeTier + 1}`, state.width * 0.5, playTop() + 52);
@@ -1185,6 +1438,88 @@ function drawThumbsUp(x, y, scale) {
   ctx.restore();
 }
 
+function drawDandruffGame() {
+  if (state.gameType !== "dandruff" || state.mode === "intro") return;
+
+  const layout = dandruffLayout();
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.fillRect(layout.x - layout.width * 0.56, layout.y + layout.height * 0.32, layout.width * 1.12, 10);
+
+  ctx.drawImage(layout.sprite, layout.left, layout.top, layout.width, layout.height);
+
+  for (const spot of state.dandruff) {
+    const x = layout.left + spot.rx * layout.width;
+    const y = layout.top + spot.ry * layout.height + Math.sin(state.time * 3 + spot.phase) * 1.5;
+    const unit = Math.max(3, spot.size * layout.scale * 0.18);
+    const alpha = spot.fresh > 0 ? 0.45 + Math.sin(state.time * 18) * 0.2 : 1;
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#fff7fb";
+    ctx.fillRect(x, y, unit * 2, unit);
+    ctx.fillRect(x + unit, y - unit, unit, unit * 3);
+    ctx.fillStyle = "#c9fff2";
+    ctx.fillRect(x + unit * 2, y + unit, unit, unit);
+    ctx.fillStyle = "#151218";
+    ctx.fillRect(x - unit * 0.35, y - unit * 0.35, unit * 0.35, unit * 2.5);
+    ctx.globalAlpha = 1;
+  }
+
+  drawDandruffSpeech(layout);
+  drawDandruffHint(layout);
+  ctx.restore();
+  ctx.imageSmoothingEnabled = true;
+}
+
+function drawDandruffSpeech(layout) {
+  if (state.dandruffThanksTimer <= 0) return;
+
+  const alpha = clamp(state.dandruffThanksTimer / 0.45, 0, 1);
+  const width = 190;
+  const height = 74;
+  const left = clamp(layout.x + layout.width * 0.18, 24, state.width - width - 24);
+  const top = clamp(layout.top + layout.height * 0.12, playTop(), state.height - height - 24);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#f8f1ff";
+  ctx.fillRect(left + 6, top, width - 12, height);
+  ctx.fillRect(left, top + 6, width, height - 12);
+  ctx.fillStyle = "#151218";
+  ctx.fillRect(left + 6, top + 6, width - 12, 4);
+  ctx.fillRect(left + 6, top + height - 10, width - 12, 4);
+  ctx.fillRect(left + 6, top + 6, 4, height - 12);
+  ctx.fillRect(left + width - 10, top + 6, 4, height - 12);
+  ctx.fillStyle = "#4b378f";
+  ctx.font = "900 17px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(state.dandruffMessage, left + 18, top + 34);
+  drawPixelHeart(left + 132, top + 22, 5, "#ff63a8");
+  drawPixelSmile(left + 158, top + 20, 4, "#ffd166");
+  ctx.restore();
+}
+
+function drawDandruffHint(layout) {
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = "#151218";
+  ctx.fillRect(24, state.height - 74, 330, 46);
+  ctx.fillStyle = "#5df0c4";
+  ctx.fillRect(28, state.height - 70, 322, 4);
+  ctx.fillRect(28, state.height - 32, 322, 4);
+  ctx.fillRect(28, state.height - 70, 4, 42);
+  ctx.fillRect(346, state.height - 70, 4, 42);
+  ctx.fillStyle = "#f8f1ff";
+  ctx.font = "900 14px 'Courier New', Inter, PingFang SC, Microsoft YaHei, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`Cleaned: ${state.dandruffRemoved}   Spots: ${state.dandruff.length}`, 44, state.height - 50);
+  ctx.restore();
+}
+
 function drawTenKCheer() {
   if (state.cheerTimer <= 0 || state.mode !== "playing") return;
 
@@ -1216,7 +1551,7 @@ function drawTenKCheer() {
 
   ctx.imageSmoothingEnabled = false;
   ctx.shadowColor = "rgba(255, 209, 102, 0.72)";
-  ctx.shadowBlur = 28;
+  ctx.shadowBlur = 12;
   ctx.drawImage(sprite, x - width * 0.5, y - height * 0.62, width, height);
   ctx.shadowBlur = 0;
 
@@ -1258,14 +1593,19 @@ function draw() {
     ctx.translate(random(-state.shake, state.shake), random(-state.shake, state.shake));
   }
   drawBackground();
-  drawEnemies();
-  drawBullets();
-  drawParticles();
-  if (state.mode !== "intro") drawPlayer();
-  drawIntroPreview();
-  drawLevelUp();
-  drawBulletUpgradeShock();
-  drawTenKCheer();
+  if (state.gameType === "dandruff" && state.mode !== "intro") {
+    drawDandruffGame();
+    drawParticles();
+  } else {
+    drawEnemies();
+    drawBullets();
+    drawParticles();
+    if (state.mode !== "intro") drawPlayer();
+    drawIntroPreview();
+    drawLevelUp();
+    drawBulletUpgradeShock();
+    drawTenKCheer();
+  }
   ctx.restore();
   drawPaused();
 }
@@ -1275,7 +1615,7 @@ function frame(now) {
   state.lastFrame = now;
   state.time += dt;
 
-  if (state.mode === "intro" && state.bullets.length < 12 && state.time % 0.26 < dt) {
+  if (state.mode === "intro" && state.gameType === "danmaku" && state.bullets.length < 12 && state.time % 0.26 < dt) {
     state.bullets.push({
       x: state.width * 0.22 + 34,
       y: state.height * 0.58 - 8 + Math.sin(state.time * 8) * 6,
@@ -1287,7 +1627,7 @@ function frame(now) {
     });
   }
 
-  if (state.mode === "intro") {
+  if (state.mode === "intro" && state.gameType === "danmaku") {
     for (const bullet of state.bullets) {
       bullet.x += bullet.vx * dt;
       bullet.y += bullet.vy * dt;
@@ -1319,7 +1659,7 @@ window.addEventListener("keydown", (event) => {
   if (key === "enter" && state.mode === "intro") advanceIntro();
   if (key === "enter" && state.mode === "over") resetGame();
   if (key === "p" || key === "escape") togglePause();
-  if (key === " ") fireBullet(true);
+  if (key === " " && state.gameType === "danmaku") fireBullet(true);
   state.keys.add(key);
 });
 
@@ -1329,6 +1669,12 @@ window.addEventListener("keyup", (event) => {
 
 canvas.addEventListener("pointerdown", (event) => {
   if (state.mode !== "playing") return;
+
+  if (state.gameType === "dandruff") {
+    handleDandruffClick(pointerPosition(event));
+    return;
+  }
+
   canvas.setPointerCapture(event.pointerId);
   state.pointer.active = true;
   Object.assign(state.pointer, pointerPosition(event));
@@ -1358,6 +1704,9 @@ startBtn.addEventListener("click", () => advanceIntro());
 retryBtn.addEventListener("click", resetGame);
 pauseBtn.addEventListener("click", togglePause);
 musicBtn.addEventListener("click", toggleMusic);
+for (const button of gameModeBtns) {
+  button.addEventListener("click", () => setGameType(button.dataset.game));
+}
 
 bgMusic.addEventListener("ended", () => {
   state.musicIndex = (state.musicIndex + 1) % musicTracks.length;
@@ -1377,6 +1726,7 @@ resize();
 state.sprite = buildFallbackSprite();
 renderIntroSaki();
 musicBtn.setAttribute("aria-pressed", "true");
+updateGameModeButtons();
 renderIntroDialogue();
 state.lastFrame = performance.now();
 requestAnimationFrame(frame);

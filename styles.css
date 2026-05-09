@@ -59,10 +59,46 @@ button {
   right: clamp(10px, 2.6vw, 24px);
   z-index: 3;
   display: grid;
-  grid-template-columns: repeat(5, minmax(74px, max-content)) 44px 44px;
+  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px;
   gap: 8px;
   align-items: center;
   pointer-events: none;
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(98px, 1fr));
+  min-height: 42px;
+  border: 2px solid var(--line);
+  background: var(--panel);
+  box-shadow:
+    4px 4px 0 #08070b,
+    inset 0 0 0 2px rgba(255, 255, 255, 0.05);
+  pointer-events: auto;
+}
+
+.mode-button {
+  min-width: 98px;
+  padding: 8px 10px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.mode-button + .mode-button {
+  border-left: 2px solid var(--line);
+}
+
+.mode-button.active,
+.mode-button:hover,
+.mode-button:focus-visible {
+  background: #2d2439;
+  color: var(--mint);
+  outline: none;
 }
 
 .meter,
