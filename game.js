@@ -208,6 +208,7 @@ const isTextEntryTarget = (target) =>
   target?.isContentEditable;
 const nextLevelCost = (level) => 24 + level * 12;
 const maxParticles = 120;
+const dressedSpriteCache = new WeakMap();
 const bulletPalettes = [
   { core: "#5df0c4", accent: "#c9fff2", glow: "rgba(93, 240, 196, 0.8)", trail: "rgba(93, 240, 196, 0.24)" },
   { core: "#ffd166", accent: "#fff0a8", glow: "rgba(255, 209, 102, 0.86)", trail: "rgba(255, 209, 102, 0.28)" },
@@ -436,6 +437,169 @@ function buildFallbackCleanSprite() {
   return portrait;
 }
 
+function getDressedSprite(baseSprite, clean = false) {
+  if (state.equippedOutfit === "default") return baseSprite;
+
+  let cache = dressedSpriteCache.get(baseSprite);
+  if (!cache) {
+    cache = new Map();
+    dressedSpriteCache.set(baseSprite, cache);
+  }
+
+  const key = `${state.equippedOutfit}:${clean ? "clean" : "small"}`;
+  if (cache.has(key)) return cache.get(key);
+
+  const dressed = document.createElement("canvas");
+  dressed.width = baseSprite.width;
+  dressed.height = baseSprite.height;
+  const px = dressed.getContext("2d");
+  px.imageSmoothingEnabled = false;
+  px.clearRect(0, 0, dressed.width, dressed.height);
+  px.drawImage(baseSprite, 0, 0);
+
+  const unit = clean ? 2 : 1;
+  const offsetX = clean ? 2 : 0;
+  const offsetY = clean ? 2 : 0;
+  drawOutfitPixels(px, state.equippedOutfit, unit, offsetX, offsetY);
+  if (state.equippedOutfit !== "mech") redrawSakiFeatures(px, clean);
+
+  cache.set(key, dressed);
+  return dressed;
+}
+
+function drawOutfitPixels(context, outfitId, unit = 1, offsetX = 0, offsetY = 0) {
+  const px = (x, y, w, h, color) => {
+    context.fillStyle = color;
+    context.fillRect(offsetX + x * unit, offsetY + y * unit, w * unit, h * unit);
+  };
+
+  if (outfitId === "maid") {
+    px(8, 36, 29, 24, "#08070b");
+    px(11, 37, 23, 20, "#fff7fb");
+    px(10, 46, 25, 14, "#08070b");
+    px(15, 39, 15, 19, "#fff7fb");
+    px(8, 39, 7, 18, "#dcd8e8");
+    px(30, 39, 7, 18, "#dcd8e8");
+    px(12, 47, 4, 9, "#ffffff");
+    px(29, 47, 4, 9, "#ffffff");
+    px(18, 42, 9, 4, "#ffffff");
+    px(17, 54, 11, 5, "#d9d1ff");
+    px(20, 49, 5, 8, "#151218");
+    px(7, 7, 8, 5, "#ffffff");
+    px(28, 7, 9, 5, "#ffffff");
+    px(14, 5, 16, 4, "#ffffff");
+    px(11, 5, 3, 3, "#fff7fb");
+    px(30, 5, 3, 3, "#fff7fb");
+    px(6, 14, 5, 5, "#ffffff");
+    px(34, 14, 5, 5, "#ffffff");
+    px(7, 13, 3, 3, "#ff63a8");
+    px(35, 13, 3, 3, "#ff63a8");
+  } else if (outfitId === "sailor") {
+    px(8, 38, 29, 22, "#3157a8");
+    px(11, 38, 23, 16, "#fff7fb");
+    px(11, 47, 23, 13, "#3157a8");
+    px(13, 39, 19, 10, "#fff7fb");
+    px(10, 41, 10, 8, "#3157a8");
+    px(25, 41, 10, 8, "#3157a8");
+    px(19, 42, 7, 10, "#e64068");
+    px(16, 50, 14, 5, "#e64068");
+    px(17, 55, 3, 4, "#fff7fb");
+    px(22, 55, 3, 4, "#fff7fb");
+    px(27, 55, 3, 4, "#fff7fb");
+    px(14, 50, 18, 2, "#6bd3ff");
+    px(22, 4, 14, 5, "#3157a8");
+    px(28, 8, 11, 4, "#3157a8");
+    px(25, 5, 9, 2, "#fff7fb");
+    px(6, 18, 7, 6, "#e64068");
+    px(9, 15, 5, 4, "#ff8aa0");
+    px(35, 18, 4, 7, "#6bd3ff");
+  } else if (outfitId === "magical") {
+    px(6, 39, 33, 21, "#8069ff");
+    px(8, 44, 7, 16, "#8069ff");
+    px(30, 44, 7, 16, "#8069ff");
+    px(11, 46, 23, 14, "#ff63a8");
+    px(15, 39, 15, 20, "#ffffff");
+    px(17, 47, 11, 12, "#ffd166");
+    px(19, 41, 7, 8, "#8069ff");
+    px(13, 42, 19, 5, "#ffd166");
+    px(9, 54, 27, 4, "#ff63a8");
+    px(13, 53, 5, 5, "#fff7fb");
+    px(27, 53, 5, 5, "#fff7fb");
+    px(16, 3, 4, 7, "#ffd166");
+    px(21, 1, 5, 8, "#ffd166");
+    px(27, 3, 4, 7, "#ffd166");
+    px(17, 8, 15, 3, "#ffffff");
+    px(35, 6, 4, 4, "#ffd166");
+    px(39, 3, 3, "#ffffff");
+    px(6, 27, 4, 4, "#ffd166");
+    px(4, 31, 3, 3, "#ffffff");
+    px(34, 26, 5, 5, "#ff63a8");
+  } else if (outfitId === "mech") {
+    px(5, 5, 35, 55, "#2c3440");
+    px(8, 10, 29, 22, "#5f6f80");
+    px(11, 18, 23, 7, "#151218");
+    px(8, 43, 29, 17, "#2c3440");
+    px(11, 39, 23, 11, "#758596");
+    px(14, 47, 17, 12, "#b9d3e8");
+    px(9, 41, 6, 9, "#5f6f80");
+    px(30, 41, 6, 9, "#5f6f80");
+    px(17, 44, 11, 4, "#5df0c4");
+    px(20, 50, 5, 7, "#2c3440");
+    px(8, 9, 29, 5, "#5f6f80");
+    px(12, 6, 21, 4, "#2c3440");
+    px(17, 8, 11, 3, "#5df0c4");
+    px(5, 25, 6, 9, "#758596");
+    px(34, 25, 6, 9, "#758596");
+    px(3, 31, 5, 6, "#5df0c4");
+    px(37, 31, 5, 6, "#5df0c4");
+    px(13, 57, 6, 4, "#5df0c4");
+    px(26, 57, 6, 4, "#5df0c4");
+  } else if (outfitId === "medieval") {
+    px(6, 37, 33, 23, "#5b2d6f");
+    px(10, 38, 25, 16, "#f7e8ff");
+    px(7, 44, 31, 16, "#5b2d6f");
+    px(11, 39, 23, 12, "#f7e8ff");
+    px(14, 46, 17, 14, "#7d4aa8");
+    px(18, 41, 9, 18, "#ffd166");
+    px(9, 47, 5, 10, "#d7b3ff");
+    px(31, 47, 5, 10, "#d7b3ff");
+    px(8, 55, 29, 4, "#7d4aa8");
+    px(12, 54, 21, 3, "#ffd166");
+    px(16, 57, 4, 3, "#f7e8ff");
+    px(25, 57, 4, 3, "#f7e8ff");
+    px(8, 7, 29, 4, "#ffd166");
+    px(12, 5, 4, 4, "#ff8aa0");
+    px(20, 4, 5, 4, "#fff7fb");
+    px(30, 5, 4, 4, "#ff8aa0");
+    px(6, 20, 7, 8, "#ffd166");
+    px(35, 20, 5, 8, "#ffd166");
+    px(5, 24, 3, 3, "#f7e8ff");
+    px(38, 24, 3, 3, "#f7e8ff");
+  }
+}
+
+function redrawSakiFeatures(context, clean = false) {
+  const unit = clean ? 2 : 1;
+  const offsetX = clean ? 2 : 0;
+  const offsetY = clean ? 2 : 0;
+  const px = (x, y, w, h, color) => {
+    context.fillStyle = color;
+    context.fillRect(offsetX + x * unit, offsetY + y * unit, w * unit, h * unit);
+  };
+
+  px(10, 5, 26, 6, "#0b0b0f");
+  px(13, 8, 25, 7, "#0b0b0f");
+  px(11, 16, 20, 4, "#0b0b0f");
+  px(28, 23, 4, 2, "#e64068");
+  px(29, 24, 3, 2, "#e64068");
+  px(31, 23, 1, 1, "#ffe9ee");
+  px(33, 8, 7, 7, "#8069ff");
+  px(36, 15, 6, 8, "#8069ff");
+  px(30, 15, 7, 7, "#8069ff");
+  px(36, 9, 2, 2, "#d9d1ff");
+  px(38, 17, 2, 2, "#d9d1ff");
+}
+
 function renderIntroDialogue() {
   const lines = state.gameType === "dandruff" ? dandruffIntroLines : introLines;
   const line = lines[state.introIndex] || lines[lines.length - 1];
@@ -453,7 +617,7 @@ function renderIntroDialogue() {
 function renderIntroSaki() {
   if (!introSakiCtx) return;
 
-  const sprite = state.sprite || buildFallbackSprite();
+  const sprite = getDressedSprite(state.sprite || buildFallbackSprite(), false);
   introSakiCtx.clearRect(0, 0, introSakiCanvas.width, introSakiCanvas.height);
   introSakiCtx.imageSmoothingEnabled = false;
   introSakiCtx.drawImage(sprite, 0, 0, introSakiCanvas.width, introSakiCanvas.height);
@@ -1621,7 +1785,7 @@ function drawBackground() {
 }
 
 function drawPlayer() {
-  const sprite = state.sprite || buildFallbackSprite();
+  const sprite = getDressedSprite(state.sprite || buildFallbackSprite(), false);
   const scale = spriteScale();
   const width = sprite.width * scale;
   const height = sprite.height * scale;
@@ -1649,125 +1813,9 @@ function drawPlayer() {
   ctx.globalAlpha = player.invuln > 0 && Math.floor(state.time * 18) % 2 === 0 ? 0.68 : 1;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(sprite, -width * 0.5, -height * 0.62, width, height);
-  drawOutfitOverlay(width, height, scale);
   drawPixelGun(width, height, scale, player.muzzle > 0);
   ctx.restore();
   ctx.imageSmoothingEnabled = true;
-}
-
-function drawOutfitOverlay(playerWidth, playerHeight, scale, anchorY = 0.62) {
-  if (state.equippedOutfit === "default") return;
-
-  const ox = -playerWidth * 0.5;
-  const oy = -playerHeight * anchorY;
-  const px = (x, y, w, h, color) => {
-    ctx.fillStyle = color;
-    ctx.fillRect(ox + x * scale, oy + y * scale, w * scale, h * scale);
-  };
-
-  if (state.equippedOutfit === "maid") {
-    px(8, 36, 29, 24, "#08070b");
-    px(11, 37, 23, 20, "#fff7fb");
-    px(10, 46, 25, 14, "#08070b");
-    px(15, 39, 15, 19, "#fff7fb");
-    px(8, 39, 7, 18, "#dcd8e8");
-    px(30, 39, 7, 18, "#dcd8e8");
-    px(12, 47, 4, 9, "#ffffff");
-    px(29, 47, 4, 9, "#ffffff");
-    px(18, 42, 9, 4, "#ffffff");
-    px(17, 54, 11, 5, "#d9d1ff");
-    px(20, 49, 5, 8, "#151218");
-    px(7, 7, 8, 5, "#ffffff");
-    px(28, 7, 9, 5, "#ffffff");
-    px(14, 5, 16, 4, "#ffffff");
-    px(11, 5, 3, 3, "#fff7fb");
-    px(30, 5, 3, 3, "#fff7fb");
-    px(6, 14, 5, 5, "#ffffff");
-    px(34, 14, 5, 5, "#ffffff");
-    px(7, 13, 3, 3, "#ff63a8");
-    px(35, 13, 3, 3, "#ff63a8");
-  } else if (state.equippedOutfit === "sailor") {
-    px(8, 38, 29, 22, "#3157a8");
-    px(11, 38, 23, 16, "#fff7fb");
-    px(11, 47, 23, 13, "#3157a8");
-    px(13, 39, 19, 10, "#fff7fb");
-    px(10, 41, 10, 8, "#3157a8");
-    px(25, 41, 10, 8, "#3157a8");
-    px(19, 42, 7, 10, "#e64068");
-    px(16, 50, 14, 5, "#e64068");
-    px(17, 55, 3, 4, "#fff7fb");
-    px(22, 55, 3, 4, "#fff7fb");
-    px(27, 55, 3, 4, "#fff7fb");
-    px(14, 50, 18, 2, "#6bd3ff");
-    px(22, 4, 14, 5, "#3157a8");
-    px(28, 8, 11, 4, "#3157a8");
-    px(25, 5, 9, 2, "#fff7fb");
-    px(6, 18, 7, 6, "#e64068");
-    px(9, 15, 5, 4, "#ff8aa0");
-    px(35, 18, 4, 7, "#6bd3ff");
-  } else if (state.equippedOutfit === "magical") {
-    px(6, 39, 33, 21, "#8069ff");
-    px(8, 44, 7, 16, "#8069ff");
-    px(30, 44, 7, 16, "#8069ff");
-    px(11, 46, 23, 14, "#ff63a8");
-    px(15, 39, 15, 20, "#ffffff");
-    px(17, 47, 11, 12, "#ffd166");
-    px(19, 41, 7, 8, "#8069ff");
-    px(13, 42, 19, 5, "#ffd166");
-    px(9, 54, 27, 4, "#ff63a8");
-    px(13, 53, 5, 5, "#fff7fb");
-    px(27, 53, 5, 5, "#fff7fb");
-    px(16, 3, 4, 7, "#ffd166");
-    px(21, 1, 5, 8, "#ffd166");
-    px(27, 3, 4, 7, "#ffd166");
-    px(17, 8, 15, 3, "#ffffff");
-    px(35, 6, 4, 4, "#ffd166");
-    px(39, 3, 3, 3, "#ffffff");
-    px(6, 27, 4, 4, "#ffd166");
-    px(4, 31, 3, 3, "#ffffff");
-    px(34, 26, 5, 5, "#ff63a8");
-  } else if (state.equippedOutfit === "mech") {
-    px(5, 5, 35, 55, "#2c3440");
-    px(8, 10, 29, 22, "#5f6f80");
-    px(11, 18, 23, 7, "#151218");
-    px(8, 43, 29, 17, "#2c3440");
-    px(11, 39, 23, 11, "#758596");
-    px(14, 47, 17, 12, "#b9d3e8");
-    px(9, 41, 6, 9, "#5f6f80");
-    px(30, 41, 6, 9, "#5f6f80");
-    px(17, 44, 11, 4, "#5df0c4");
-    px(20, 50, 5, 7, "#2c3440");
-    px(8, 9, 29, 5, "#5f6f80");
-    px(12, 6, 21, 4, "#2c3440");
-    px(17, 8, 11, 3, "#5df0c4");
-    px(5, 25, 6, 9, "#758596");
-    px(34, 25, 6, 9, "#758596");
-    px(3, 31, 5, 6, "#5df0c4");
-    px(37, 31, 5, 6, "#5df0c4");
-    px(13, 57, 6, 4, "#5df0c4");
-    px(26, 57, 6, 4, "#5df0c4");
-  } else if (state.equippedOutfit === "medieval") {
-    px(6, 37, 33, 23, "#5b2d6f");
-    px(10, 38, 25, 16, "#f7e8ff");
-    px(7, 44, 31, 16, "#5b2d6f");
-    px(11, 39, 23, 12, "#f7e8ff");
-    px(14, 46, 17, 14, "#7d4aa8");
-    px(18, 41, 9, 18, "#ffd166");
-    px(9, 47, 5, 10, "#d7b3ff");
-    px(31, 47, 5, 10, "#d7b3ff");
-    px(8, 55, 29, 4, "#7d4aa8");
-    px(12, 54, 21, 3, "#ffd166");
-    px(16, 57, 4, 3, "#f7e8ff");
-    px(25, 57, 4, 3, "#f7e8ff");
-    px(8, 7, 29, 4, "#ffd166");
-    px(12, 5, 4, 4, "#ff8aa0");
-    px(20, 4, 5, 4, "#fff7fb");
-    px(30, 5, 4, 4, "#ff8aa0");
-    px(6, 20, 7, 8, "#ffd166");
-    px(35, 20, 5, 8, "#ffd166");
-    px(5, 24, 3, 3, "#f7e8ff");
-    px(38, 24, 3, 3, "#f7e8ff");
-  }
 }
 
 function drawPixelGun(playerWidth, playerHeight, scale, firing) {
@@ -2147,8 +2195,8 @@ function drawDandruffGame() {
 
   ctx.save();
   ctx.translate(layout.x, layout.y);
-  ctx.drawImage(layout.sprite, -layout.width * 0.5, -layout.height * 0.5, layout.width, layout.height);
-  drawOutfitOverlay(layout.width, layout.height, layout.scale * 2, 0.5);
+  const dressedSprite = getDressedSprite(layout.sprite, true);
+  ctx.drawImage(dressedSprite, -layout.width * 0.5, -layout.height * 0.5, layout.width, layout.height);
   ctx.restore();
 
   for (const spot of state.dandruff) {
