@@ -5,9 +5,7 @@ const introSakiCtx = introSakiCanvas.getContext("2d");
 
 const scoreEl = document.querySelector("#score");
 const shieldEl = document.querySelector("#shield");
-const comboEl = document.querySelector("#combo");
 const goldEl = document.querySelector("#gold");
-const levelEl = document.querySelector("#level");
 const xpTextEl = document.querySelector("#xpText");
 const xpFillEl = document.querySelector("#xpFill");
 const finalScoreEl = document.querySelector("#finalScore");
@@ -189,6 +187,11 @@ const state = {
 
 const random = (min, max) => min + Math.random() * (max - min);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const isTextEntryTarget = (target) =>
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLTextAreaElement ||
+  target instanceof HTMLSelectElement ||
+  target?.isContentEditable;
 const nextLevelCost = (level) => 24 + level * 12;
 const maxParticles = 170;
 const bulletPalettes = [
@@ -532,6 +535,7 @@ function closeShop() {
 }
 
 function openMessagePanel() {
+  if (!messagePanel) return;
   state.messageResumeOnClose = false;
   if (state.mode === "playing") {
     state.messageResumeOnClose = true;
@@ -539,11 +543,12 @@ function openMessagePanel() {
     pauseBtn.textContent = "▶";
     pauseMusic();
   }
-  cryptoStatusEl.textContent = "Runs locally in this browser. Enter a message and passphrase.";
+  if (cryptoStatusEl) cryptoStatusEl.textContent = "Runs locally in this browser. Enter a message and passphrase.";
   messagePanel.classList.remove("hidden");
 }
 
 function closeMessagePanel() {
+  if (!messagePanel) return;
   messagePanel.classList.add("hidden");
   if (state.messageResumeOnClose && state.mode === "paused") {
     state.mode = "playing";
@@ -983,9 +988,7 @@ function updateHud() {
   if (state.gameType === "dandruff") {
     scoreEl.textContent = state.dandruffRemoved.toString();
     shieldEl.textContent = "OK";
-    comboEl.textContent = state.combo.toString();
     goldEl.textContent = state.gold.toString();
-    levelEl.textContent = state.level.toString();
     xpTextEl.textContent = `${state.dandruffBottleCount} / 65 bottle`;
     xpFillEl.style.width = `${Math.round(clamp(state.dandruffBottleCount / 65, 0, 1) * 100)}%`;
     return;
@@ -995,9 +998,7 @@ function updateHud() {
   const xpRatio = clamp(state.levelGold / cost, 0, 1);
   scoreEl.textContent = Math.floor(state.score).toString();
   shieldEl.textContent = Math.max(0, state.shield).toString();
-  comboEl.textContent = state.combo.toString();
   goldEl.textContent = state.gold.toString();
-  levelEl.textContent = state.level.toString();
   xpTextEl.textContent = `${state.levelGold} / ${cost}`;
   xpFillEl.style.width = `${Math.round(xpRatio * 100)}%`;
 }
@@ -2373,6 +2374,8 @@ function pointerPosition(event) {
 window.addEventListener("resize", resize);
 
 window.addEventListener("keydown", (event) => {
+  if (isTextEntryTarget(event.target)) return;
+
   const key = event.key.toLowerCase();
   if (["arrowleft", "arrowright", "arrowup", "arrowdown", " ", "w", "a", "s", "d"].includes(key)) {
     event.preventDefault();
@@ -2436,12 +2439,12 @@ shopItemsEl.addEventListener("click", (event) => {
   if (!button) return;
   buyOrEquipOutfit(button.dataset.outfit);
 });
-messageBtn.addEventListener("click", openMessagePanel);
-closeMessageBtn.addEventListener("click", closeMessagePanel);
-messagePanel.addEventListener("click", (event) => {
+messageBtn?.addEventListener("click", openMessagePanel);
+closeMessageBtn?.addEventListener("click", closeMessagePanel);
+messagePanel?.addEventListener("click", (event) => {
   if (event.target === messagePanel) closeMessagePanel();
 });
-encryptMessageBtn.addEventListener("click", () => {
+encryptMessageBtn?.addEventListener("click", () => {
   generateEncryptedMessage();
 });
 closeLeaderboardBtn.addEventListener("click", closeLeaderboard);

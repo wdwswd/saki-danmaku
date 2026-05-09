@@ -59,7 +59,7 @@ button {
   right: clamp(10px, 2.6vw, 24px);
   z-index: 3;
   display: grid;
-  grid-template-columns: minmax(220px, max-content) repeat(5, minmax(74px, max-content)) 44px 44px 44px 44px 44px;
+  grid-template-columns: minmax(220px, max-content) repeat(3, minmax(74px, max-content)) 44px 44px 44px 44px;
   gap: 8px;
   align-items: center;
   pointer-events: none;
