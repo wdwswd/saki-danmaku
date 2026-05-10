@@ -255,200 +255,108 @@ function roundRect(context, x, y, width, height, radius) {
   context.closePath();
 }
 
+function drawUnifiedSakiPixels(context, outfitId = "default", scale = 1, offsetX = 0, offsetY = 0) {
+  const px = (x, y, w, h, color) => {
+    context.fillStyle = color;
+    context.fillRect(offsetX + x * scale, offsetY + y * scale, w * scale, h * scale);
+  };
+  const dot = (x, y, w, h, color) => {
+    context.fillStyle = color;
+    context.fillRect(offsetX + x * scale, offsetY + y * scale, w, h);
+  };
+
+  context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+
+  if (outfitId === "mech") {
+    drawOutfitPixels(context, "mech", scale, offsetX, offsetY);
+    return;
+  }
+
+  px(6, 12, 9, 43, "#08080b");
+  px(30, 12, 9, 43, "#08080b");
+  px(10, 6, 26, 15, "#0b0b0f");
+  px(8, 17, 31, 20, "#0b0b0f");
+  px(9, 36, 8, 18, "#111015");
+  px(29, 36, 8, 19, "#111015");
+  px(13, 46, 21, 8, "#151218");
+
+  px(14, 22, 19, 15, "#fff1e8");
+  px(16, 36, 14, 5, "#fff1e8");
+  px(21, 41, 6, 3, "#f0cfc2");
+  px(14, 32, 4, 4, "#ffe1df");
+  px(30, 32, 4, 4, "#ffe1df");
+
+  px(10, 10, 27, 8, "#111015");
+  px(9, 16, 24, 6, "#0a0a0d");
+  px(9, 21, 18, 5, "#070709");
+  px(12, 26, 11, 4, "#070709");
+  px(27, 14, 9, 31, "#08080b");
+  px(6, 22, 7, 25, "#0b0b0f");
+  px(33, 24, 6, 24, "#0b0b0f");
+  px(13, 45, 4, 11, "#151218");
+  px(30, 44, 4, 12, "#151218");
+
+  px(28, 24, 4, 2, "#d93662");
+  px(29, 26, 4, 2, "#e64068");
+  px(32, 24, 1, 1, "#ffe3ec");
+  px(23, 33, 4, 1, "#d96f75");
+  px(24, 34, 2, 1, "#d96f75");
+  dot(18, 13, Math.max(1, scale), Math.max(1, scale * 0.5), "rgba(255, 255, 255, 0.45)");
+  dot(22, 11, Math.max(2, scale * 1.5), Math.max(1, scale * 0.5), "rgba(255, 255, 255, 0.32)");
+  dot(31, 25, Math.max(1, scale * 0.5), Math.max(1, scale * 0.5), "#ffffff");
+
+  if (outfitId === "default") {
+    px(14, 39, 16, 7, "#ffffff");
+    px(16, 46, 12, 6, "#fff7fb");
+    px(10, 49, 25, 11, "#a58cff");
+    px(15, 50, 16, 9, "#c5b6ff");
+    px(19, 50, 7, 9, "#4b378f");
+    px(21, 51, 3, 3, "#fbf8ff");
+    px(9, 43, 6, 13, "#dcd8e8");
+    px(31, 43, 6, 13, "#dcd8e8");
+  } else {
+    drawOutfitPixels(context, outfitId, scale, offsetX, offsetY);
+  }
+
+  px(33, 8, 7, 7, "#8069ff");
+  px(36, 15, 6, 8, "#8069ff");
+  px(30, 15, 7, 7, "#8069ff");
+  px(36, 9, 2, 2, "#d9d1ff");
+  px(38, 17, 2, 2, "#d9d1ff");
+  px(35, 11, 2, 1, "#f0ecff");
+}
+
+function buildUnifiedSakiSprite(outfitId = "default", clean = false) {
+  const canvas = document.createElement("canvas");
+  const detail = clean ? 2 : 2;
+  const logicalWidth = 44;
+  const logicalHeight = 62;
+  const offset = clean ? 2 : 0;
+  canvas.width = clean ? 92 : logicalWidth * detail;
+  canvas.height = clean ? 128 : logicalHeight * detail;
+  const px = canvas.getContext("2d");
+  px.imageSmoothingEnabled = false;
+  drawUnifiedSakiPixels(px, outfitId, detail, offset, offset);
+  if (clean && outfitId !== "default") drawCleanOutfitDetails(px, outfitId);
+  return canvas;
+}
+
 function buildSpriteFromImage(image) {
-  const low = document.createElement("canvas");
-  const detail = 2;
-  const virtualWidth = 44;
-  const virtualHeight = 62;
-  low.width = virtualWidth * detail;
-  low.height = virtualHeight * detail;
-  const px = low.getContext("2d");
-  px.imageSmoothingEnabled = false;
-  px.scale(detail, detail);
-  px.clearRect(0, 0, low.width, low.height);
-
-  px.fillStyle = "rgba(12, 12, 15, 0.88)";
-  px.fillRect(7, 9, 8, 43);
-  px.fillRect(29, 10, 8, 43);
-  px.fillRect(13, 4, 20, 9);
-  px.fillRect(10, 46, 24, 8);
-
-  px.save();
-  px.beginPath();
-  px.ellipse(22, 22, 18, 21, 0, 0, Math.PI * 2);
-  px.rect(9, 32, 26, 26);
-  px.clip();
-  px.imageSmoothingEnabled = true;
-  px.drawImage(image, 58, 18, 732, 1032, 0, 0, virtualWidth, virtualHeight);
-  px.restore();
-  px.imageSmoothingEnabled = false;
-
-  px.fillStyle = "rgba(9, 9, 12, 0.82)";
-  px.fillRect(6, 14, 5, 30);
-  px.fillRect(32, 13, 5, 32);
-  px.fillRect(10, 5, 26, 6);
-  px.fillRect(13, 8, 25, 7);
-  px.fillRect(11, 16, 20, 4);
-  px.fillRect(8, 40, 7, 16);
-  px.fillRect(30, 39, 7, 16);
-
-  px.fillStyle = "rgba(255, 245, 237, 0.88)";
-  px.fillRect(14, 23, 19, 13);
-  px.fillRect(17, 35, 12, 5);
-
-  px.fillStyle = "#e64068";
-  px.fillRect(28, 23, 4, 2);
-  px.fillRect(29, 24, 3, 2);
-  px.fillStyle = "#ffe9ee";
-  px.fillRect(31, 23, 1, 1);
-
-  px.fillStyle = "#ffffff";
-  px.fillRect(14, 39, 16, 7);
-  px.fillRect(16, 46, 12, 6);
-  px.fillStyle = "#a58cff";
-  px.fillRect(11, 49, 22, 10);
-  px.fillStyle = "#4b378f";
-  px.fillRect(19, 50, 6, 9);
-  px.fillStyle = "#fbf8ff";
-  px.fillRect(20, 51, 3, 3);
-
-  px.fillStyle = "#8069ff";
-  px.fillRect(33, 8, 7, 7);
-  px.fillRect(36, 15, 6, 8);
-  px.fillRect(30, 15, 7, 7);
-  px.fillStyle = "#d9d1ff";
-  px.fillRect(36, 9, 2, 2);
-  px.fillRect(38, 17, 2, 2);
-
-  px.fillStyle = "rgba(255, 255, 255, 0.38)";
-  px.fillRect(17, 13, 3, 2);
-  px.fillRect(20, 10, 4, 1);
-  px.fillRect(24, 43, 2, 2);
-
-  return low;
+  void image;
+  return buildUnifiedSakiSprite("default", false);
 }
 
 function buildCleanSpriteFromImage(image) {
-  const portrait = document.createElement("canvas");
-  portrait.width = 92;
-  portrait.height = 128;
-  const px = portrait.getContext("2d");
-  px.imageSmoothingEnabled = false;
-  px.clearRect(0, 0, portrait.width, portrait.height);
-
-  px.fillStyle = "#0b0b0f";
-  px.fillRect(10, 8, 72, 78);
-  px.fillRect(4, 38, 18, 76);
-  px.fillRect(70, 34, 18, 82);
-
-  px.save();
-  px.beginPath();
-  px.ellipse(46, 44, 38, 42, 0, 0, Math.PI * 2);
-  px.rect(18, 56, 56, 64);
-  px.clip();
-  px.drawImage(image, 58, 18, 732, 1032, 0, 0, portrait.width, portrait.height);
-  px.restore();
-
-  px.fillStyle = "rgba(8, 8, 11, 0.86)";
-  px.fillRect(8, 24, 14, 58);
-  px.fillRect(70, 22, 14, 60);
-  px.fillRect(16, 9, 58, 14);
-  px.fillRect(12, 21, 66, 16);
-  px.fillRect(10, 34, 42, 12);
-  px.fillRect(14, 46, 27, 9);
-  px.fillRect(4, 76, 18, 42);
-  px.fillRect(70, 76, 18, 42);
-
-  px.fillStyle = "#fff1e8";
-  px.fillRect(25, 48, 42, 28);
-  px.fillRect(30, 75, 30, 12);
-  px.fillRect(34, 86, 22, 7);
-
-  px.fillStyle = "#0b0b0f";
-  px.fillRect(20, 45, 38, 9);
-  px.fillRect(18, 54, 22, 5);
-  px.fillRect(21, 60, 12, 4);
-  px.fillRect(60, 40, 12, 38);
-
-  px.fillStyle = "#d93662";
-  px.fillRect(57, 54, 7, 3);
-  px.fillRect(59, 57, 5, 2);
-  px.fillStyle = "#ffe3ec";
-  px.fillRect(62, 54, 2, 1);
-
-  px.fillStyle = "#d96f75";
-  px.fillRect(42, 77, 8, 2);
-  px.fillRect(45, 79, 4, 1);
-  px.fillStyle = "rgba(255, 224, 224, 0.72)";
-  px.fillRect(23, 66, 6, 3);
-  px.fillRect(61, 66, 6, 3);
-
-  px.fillStyle = "#ffffff";
-  px.fillRect(28, 92, 36, 14);
-  px.fillRect(32, 106, 28, 9);
-  px.fillStyle = "#a58cff";
-  px.fillRect(22, 109, 48, 15);
-  px.fillRect(34, 101, 24, 10);
-  px.fillStyle = "#4b378f";
-  px.fillRect(42, 110, 9, 14);
-  px.fillStyle = "#fbf8ff";
-  px.fillRect(44, 112, 5, 5);
-
-  px.fillStyle = "#8069ff";
-  px.fillRect(70, 14, 14, 14);
-  px.fillRect(76, 28, 12, 16);
-  px.fillRect(64, 28, 13, 13);
-  px.fillStyle = "#d9d1ff";
-  px.fillRect(76, 16, 5, 4);
-  px.fillRect(80, 31, 4, 4);
-
-  px.fillStyle = "rgba(255, 255, 255, 0.34)";
-  px.fillRect(31, 23, 8, 2);
-  px.fillRect(40, 18, 9, 2);
-  px.fillRect(50, 24, 5, 2);
-  px.fillRect(35, 95, 5, 3);
-
-  return portrait;
+  void image;
+  return buildUnifiedSakiSprite("default", true);
 }
 
 function buildFallbackSprite() {
-  const low = document.createElement("canvas");
-  low.width = 44;
-  low.height = 62;
-  const px = low.getContext("2d");
-  px.imageSmoothingEnabled = false;
-  px.clearRect(0, 0, low.width, low.height);
-
-  px.fillStyle = "#111015";
-  px.fillRect(8, 8, 28, 32);
-  px.fillRect(6, 17, 8, 32);
-  px.fillRect(30, 18, 8, 32);
-  px.fillStyle = "#fff4ee";
-  px.fillRect(14, 20, 19, 18);
-  px.fillStyle = "#0b0b0f";
-  px.fillRect(10, 10, 28, 13);
-  px.fillRect(9, 22, 12, 6);
-  px.fillStyle = "#e64068";
-  px.fillRect(29, 25, 4, 2);
-  px.fillStyle = "#ffffff";
-  px.fillRect(15, 39, 16, 9);
-  px.fillStyle = "#9c7cff";
-  px.fillRect(11, 49, 22, 10);
-  px.fillRect(33, 9, 8, 14);
-  px.fillRect(30, 14, 12, 7);
-  return low;
+  return buildUnifiedSakiSprite("default", false);
 }
 
 function buildFallbackCleanSprite() {
-  const fallbackImage = buildFallbackSprite();
-  const portrait = document.createElement("canvas");
-  portrait.width = 92;
-  portrait.height = 128;
-  const px = portrait.getContext("2d");
-  px.imageSmoothingEnabled = false;
-  px.clearRect(0, 0, portrait.width, portrait.height);
-  px.drawImage(fallbackImage, 0, 0, fallbackImage.width, fallbackImage.height, 10, 0, 72, 112);
-  return portrait;
+  return buildUnifiedSakiSprite("default", true);
 }
 
 function getDressedSprite(baseSprite, clean = false) {
@@ -469,15 +377,12 @@ function getDressedSprite(baseSprite, clean = false) {
   const px = dressed.getContext("2d");
   px.imageSmoothingEnabled = false;
   px.clearRect(0, 0, dressed.width, dressed.height);
-  px.drawImage(baseSprite, 0, 0);
 
-  const unit = clean ? 2 : baseSprite.width / 44;
+  const unit = clean ? 2 : dressed.width / 44;
   const offsetX = clean ? 2 : 0;
   const offsetY = clean ? 2 : 0;
-  rebuildCharacterForOutfit(px, state.equippedOutfit, clean);
-  drawOutfitPixels(px, state.equippedOutfit, unit, offsetX, offsetY);
+  drawUnifiedSakiPixels(px, state.equippedOutfit, unit, offsetX, offsetY);
   if (clean) drawCleanOutfitDetails(px, state.equippedOutfit);
-  if (state.equippedOutfit !== "mech") redrawSakiFeatures(px, clean);
 
   cache.set(key, dressed);
   return dressed;
@@ -2438,27 +2343,29 @@ function drawSpeechBubble(x, y, text) {
 }
 
 function drawThumbsUp(x, y, scale) {
-  const unit = scale * 0.58;
+  const unit = scale * 0.9;
   const map = [
-    "........SSSS.........",
-    ".......SSSSS.........",
-    "......SSSSSS.........",
-    ".....SSSSSSS.........",
-    "....SSSSSSS..........",
-    "...SSSSSSS...........",
-    "..SSSSSSS............",
-    "..SSSSSSSSSSSS.......",
-    "..SSSSSSSSSSSSSS.....",
-    ".CCCCSSSSSSSSSSS.....",
-    ".CCCCSSSSSSSSSSSS....",
-    ".CCCCSSSSSSSSSSS.....",
-    ".CCCCSSSSSSSSSS......",
-    ".CCCCSSSSSSSSS.......",
-    ".CCCCSSSSSS..........",
-    ".CCCC................",
+    "....TTTT.........",
+    "...TTTTT.........",
+    "...TTTTT.........",
+    "...TTTT..........",
+    "...TTTT..........",
+    "...TTTT..........",
+    "...TTTTSSSS......",
+    "..TTTTSSSSSS.....",
+    "..SSSSSPPPPPP....",
+    "..SSSSSPPPPPP....",
+    ".SSSSSSPPPPP.....",
+    ".SSSSSSPPPP......",
+    ".CCCCSSPPP.......",
+    ".CCCCSS..........",
+    ".CCCC............",
+    ".CCCC............",
   ];
   const colors = {
     S: "#f4d2bf",
+    T: "#ffd8c4",
+    P: "#f0c6b1",
     C: "#a58cff",
   };
 
@@ -2466,13 +2373,13 @@ function drawThumbsUp(x, y, scale) {
   ctx.translate(x, y);
   drawPixelMap(map, colors, unit, Math.max(1, unit * 0.22));
   ctx.fillStyle = "#fff4ee";
-  ctx.fillRect(7 * unit, 2 * unit, 2 * unit, unit);
-  ctx.fillRect(12 * unit, 9 * unit, 5 * unit, unit);
-  ctx.fillRect(12 * unit, 11 * unit, 5 * unit, unit);
-  ctx.fillRect(12 * unit, 13 * unit, 4 * unit, unit);
+  ctx.fillRect(7 * unit, 1 * unit, 2 * unit, unit);
+  ctx.fillRect(11 * unit, 7 * unit, 5 * unit, unit);
+  ctx.fillRect(11 * unit, 9 * unit, 5 * unit, unit);
+  ctx.fillRect(10 * unit, 11 * unit, 4 * unit, unit);
   ctx.fillStyle = "#ffd166";
-  ctx.fillRect(18 * unit, 4 * unit, unit, unit);
-  ctx.fillRect(19 * unit, 6 * unit, unit, unit);
+  ctx.fillRect(14 * unit, 4 * unit, unit, unit);
+  ctx.fillRect(15 * unit, 6 * unit, unit, unit);
   ctx.restore();
 }
 
@@ -2636,12 +2543,12 @@ function drawTenKCheer() {
   const duration = 3.2;
   const progress = 1 - state.cheerTimer / duration;
   const alpha = state.cheerTimer < 1 ? state.cheerTimer : Math.min(1, progress / 0.12);
-  const sprite = state.sprite || buildFallbackSprite();
+  const sprite = getDressedSprite(state.sprite || buildFallbackSprite(), false);
   const baseScale = clamp(state.width / 720, 2.35, 3.35);
   const pulse = 1 + Math.sin(state.time * 6) * 0.025;
   const width = sprite.width * baseScale * pulse;
   const height = sprite.height * baseScale * pulse;
-  const x = state.width * 0.5 - 138;
+  const x = state.width * 0.5 - 92;
   const y = state.height * 0.54 + Math.sin(state.time * 5) * 4;
 
   ctx.save();
@@ -2667,7 +2574,7 @@ function drawTenKCheer() {
 
   const raise = progress < 0.22 ? 52 * (1 - progress / 0.22) : 0;
   const thumbWave = progress > 0.24 ? Math.sin(progress * Math.PI * 6) * 2 : 0;
-  drawThumbsUp(x + width * 0.18, y - height * 0.48 + raise + thumbWave, baseScale);
+  drawThumbsUp(x + width * 0.54, y - height * 0.24 + raise + thumbWave, baseScale * 2.05);
 
   ctx.fillStyle = "#ffd166";
   ctx.textAlign = "center";
@@ -2710,7 +2617,7 @@ function draw() {
     drawEnemies();
     drawBullets();
     drawParticles();
-    if (state.mode !== "intro") drawPlayer();
+    if (state.mode !== "intro" && state.cheerTimer <= 0) drawPlayer();
     drawIntroPreview();
     drawLevelUp();
     drawBulletUpgradeShock();
